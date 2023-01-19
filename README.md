@@ -8,7 +8,7 @@ Each assignment will ultimately result in a working compiler phase which can int
 
 | PA  | brief  | status |
 |-----|--------|--------|
-| [PA1](handouts/PA1.pdf) | acquaint with the Cool language | [in progress](assignments/PA1/) |
+| [PA1](handouts/PA1.pdf) | acquaint with the Cool language | [test passed](assignments/PA1/) |
 | [PA2](handouts/PA2.pdf) |        | to do |
 | [PA3](handouts/PA3.pdf) |        | to do |
 | [PA4](handouts/PA4.pdf) |        | to do |
