@@ -1,31 +1,38 @@
 class Stack {
 
-   list : List <- new List;
+   node : StackNode;
 
+   -- Sets "this" stack as the receiver of the command and pushes onto the stack.
    push(c : StackCommand) : Stack { {
-      list <- list.cons(c);
+      c.set_receiver(self);
+      node <- (new StackNode).init(c, node);
       self;
    } };
 
+   -- Removes the top-most node from the stack and returns the command of it.
    pop() : StackCommand {
-      (let top : StackCommand <- list.head() in {
-         list <- list.tail();
-         top;
+      (let top : StackNode <- node in {
+         node <- node.next();
+         top.val();
       })
    };
 
+   (**
+    * Evaluates the command of the top-most node.
+    *
+    * It's safe to evaluate an empty stack.
+    *)
    evaluate() : Int {
-      if not list.isNil() then
-         list.head().evaluate()
-      else 0 fi
+      if not isvoid node then node.val().evaluate() else 0 fi
    };
 
+   -- Iterates through all of the nodes and displays them one by one.
    display() : Object {
-      (let curr : List <- list in
-         while not curr.isNil() loop {
-            curr.head().display();
+      (let curr : StackNode <- node in
+         while not isvoid curr loop {
+            curr.val().display();
             (new IO).out_string("\n");
-            curr <- curr.tail();
+            curr <- curr.next();
          } pool
       )
    };
@@ -36,6 +43,8 @@ class Stack {
 class StackCommand {
 
    stack : Stack;
+
+   -- using abort() to simulate an abstract class: should override
 
    evaluate() : Int { { abort(); 0; } };
 
@@ -115,14 +124,13 @@ class Main inherits IO {
          else if command = "e" then
             stack.evaluate()
          else if command = "+" then
-            stack.push((new PlusCommand).set_receiver(stack))
+            stack.push(new PlusCommand)
          else if command = "s" then
-            stack.push((new SwapCommand).set_receiver(stack))
+            stack.push(new SwapCommand)
          else  -- is integer
             stack.push(
                (new IntCommand)
                   .init((new A2I).a2i(command))
-                  .set_receiver(stack)
             )
          fi fi fi fi;
          command <- prompt();
@@ -137,42 +145,23 @@ class Main inherits IO {
 };
 
 
-(*
- * The following implementation of the List (& Cons) data structure
- * are based on [Cool root]/examples/list.cl with the underlaying data
- * type changed from Int to StackCommand.
+(**
+ * Though it's named "StackNode", multiple StackNodes
+ * together can effectively construct a singly linked list.
  *)
+class StackNode {
 
-class List {
+   val : StackCommand;
 
-   isNil() : Bool { true };
+   next : StackNode;
 
-   head() : StackCommand { { abort(); new StackCommand; } };
+   val() : StackCommand { val };
 
-   tail() : List { { abort(); self; } };
+   next() : StackNode { next };
 
-   cons(c : StackCommand) : List {
-      (new Cons).init(c, self)
-   };
-
-};
-
-
-class Cons inherits List {
-
-   car : StackCommand;
-
-   cdr : List;
-
-   isNil() : Bool { false };
-
-   head() : StackCommand { car };
-
-   tail() : List { cdr };
-
-   init(c : StackCommand, rest : List) : List { {
-      car <- c;
-      cdr <- rest;
+   init(v : StackCommand, n : StackNode) : StackNode { {
+      val <- v;
+      next <- n;
       self;
    } };
 
