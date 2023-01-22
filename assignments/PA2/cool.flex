@@ -46,6 +46,7 @@ extern YYSTYPE cool_yylval;
  */
 #include <assert.h>
 #include <ctype.h> /* tolower */
+#include <stdbool.h>
 #include <stddef.h> /* size_t */
 #include <stdlib.h> /* atoi */
 
@@ -71,8 +72,12 @@ void ShouldNotReachHere() {
   assert(0);
 }
 
+bool in_one_line_comment = false;
+int nested_comment_level = 0;
+
 %}
 
+%x COMMENT
 /*
  * Define names for regular expressions here.
  */
@@ -94,10 +99,36 @@ SINGLE_OP  [-+*\/:~<>=(){};.,]
  /*
   *  Nested comments
   */
- /* TODO: nested comments */
+--  {
+  if (!in_one_line_comment) {
+    in_one_line_comment = true;
+    BEGIN(COMMENT);
+  }
+}
+<INITIAL,COMMENT>"(*"  {
+  if (!in_one_line_comment) {
+    nested_comment_level++;
+    BEGIN(COMMENT);
+  }
+}
+<COMMENT>"*)" {
+  if (!in_one_line_comment
+      && --nested_comment_level == 0) {
+    BEGIN(INITIAL);
+  }
+}
+<COMMENT>\n {
+  curr_lineno++;
+  if (in_one_line_comment) {
+    in_one_line_comment = false;
+    BEGIN(INITIAL);
+  }
+}
+<COMMENT>.  ; /* eat up */
+ /* TODO: EOF in comment */
 
 \n  curr_lineno++;
-[ \f\r\t\v]+ ;  /* eat up */
+[ \f\r\t\v]+  ; /* eat up */
 
  /*
   *  The multiple-character operators.
