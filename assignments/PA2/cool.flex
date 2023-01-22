@@ -125,7 +125,13 @@ SINGLE_OP  [-+*\/:~<>=(){};.,]
   }
 }
 <COMMENT>.  ; /* eat up */
- /* TODO: EOF in comment */
+<COMMENT><<EOF>> {
+  /* change back to INITIAL so next scan will trigger the yyterminate()
+    instead of stuck in the infinite loop */
+  BEGIN(INITIAL);
+  yylval.error_msg = "EOF in comment";
+  return ERROR;
+}
 
 \n  curr_lineno++;
 [ \f\r\t\v]+  ; /* eat up */
