@@ -61,10 +61,14 @@ KeywordAndCode keywords[] = {
   {"new", NEW}, {"of", OF}, {"not", NOT},
 };
 
-void to_lower_s(char *s) {
+void ToLowerStr(char *s) {
   for (int i = 0; s[i]; i++) {
     s[i] = tolower(s[i]);
   }
+}
+
+void ShouldNotReachHere() {
+  assert(0);
 }
 
 %}
@@ -83,7 +87,7 @@ OBJECT_ID [[:alnum:]_]+
 DARROW  =>
 ASSIGN  <-
 /* - and / has to be escaped */
-SINGLEOP  [-+*\/:~<>=(){};]
+SINGLE_OP  [-+*\/:~<>=(){};]
 
 %%
 
@@ -104,7 +108,7 @@ SINGLEOP  [-+*\/:~<>=(){};]
  /*
   * The single-character operators.
   */
-{SINGLEOP} {
+{SINGLE_OP} {
   cool_yylval.symbol = idtable.add_string(yytext);
   assert(!yytext[1]);
   return yytext[0];
@@ -117,24 +121,24 @@ SINGLEOP  [-+*\/:~<>=(){};]
 {KEYWORD} {
   cool_yylval.symbol = idtable.add_string(yytext);
 
-  to_lower_s(yytext);
+  ToLowerStr(yytext);
   for (size_t i = 0; i < sizeof(keywords)/sizeof(KeywordAndCode); i++) {
     if (strcmp(yytext, keywords[i].keyword) == 0) {
       return keywords[i].code;
     }
   }
-  assert(0);
+  ShouldNotReachHere();
 }
 {BOOL} {
   idtable.add_string(yytext);
 
-  to_lower_s(yytext);
+  ToLowerStr(yytext);
   if (strcmp(yytext, "false") == 0) {
     cool_yylval.boolean = 0;
   } else if (strcmp(yytext, "true") == 0) {
     cool_yylval.boolean = 1;
   }
-  assert(0);
+  ShouldNotReachHere();
 }
 {DIGIT}+  {
   cool_yylval.symbol = inttable.add_int(atoi(yytext));
