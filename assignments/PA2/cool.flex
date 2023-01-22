@@ -82,7 +82,7 @@ KEYWORD (?i:class|else|fi|if|in|inherits|isvoid|let|loop|pool|then|while|case|es
 BOOL  [Tt]rue|[Ff]alse
 
 TYPE_ID Object|Bool|Int|String|SELF_TYPE|self
-OBJECT_ID [[:alnum:]_]+
+OBJECT_ID [:alpha:][[:alnum:]_]*
 
 DARROW  =>
 ASSIGN  <-
@@ -152,7 +152,7 @@ SINGLE_OP  [-+*\/:~<>=(){};]
   cool_yylval.symbol = idtable.add_string(yytext);
   return TYPEID;
 }
- /* TODO: OBJECT_ID after CLASS should be a TYPE_ID */
+ /* TODO: OBJECTID after CLASS should be a TYPEID */
 {OBJECT_ID} {
   cool_yylval.symbol = idtable.add_string(yytext);
   return OBJECTID;
