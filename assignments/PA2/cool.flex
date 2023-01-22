@@ -87,7 +87,7 @@ OBJECT_ID [:alpha:][[:alnum:]_]*
 DARROW  =>
 ASSIGN  <-
 /* - and / has to be escaped */
-SINGLE_OP  [-+*\/:~<>=(){};]
+SINGLE_OP  [-+*\/:~<>=(){};.,]
 
 %%
 
