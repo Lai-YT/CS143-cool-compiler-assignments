@@ -172,9 +172,9 @@ SINGLE_OP  [-+*\/:~<>=(){};.,]
 
   ToLowerStr(yytext);
   if (strcmp(yytext, "false") == 0) {
-    cool_yylval.boolean = 0;
+    cool_yylval.boolean = false;
   } else if (strcmp(yytext, "true") == 0) {
-    cool_yylval.boolean = 1;
+    cool_yylval.boolean = true;
   }
   ShouldNotReachHere();
 }

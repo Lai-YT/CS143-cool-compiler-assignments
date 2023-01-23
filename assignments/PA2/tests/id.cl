@@ -7,4 +7,8 @@ cLaSs Main {
   main() : Object {
     att_R1 <- 0
   };
+
+  tryKeywordFalse() : Bool {
+    false
+  };
 };
