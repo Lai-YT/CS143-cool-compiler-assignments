@@ -87,7 +87,8 @@ KEYWORD (?i:class|else|fi|if|in|inherits|isvoid|let|loop|pool|then|while|case|es
 BOOL  [Tt]rue|[Ff]alse
 
 TYPE_ID Object|Bool|Int|String|SELF_TYPE|self
-OBJECT_ID [:alpha:][[:alnum:]_]*
+/* XXX: "character class expressions" aren't working correctly */
+OBJECT_ID [a-zA-Z][a-zA-Z0-9_]*
 
 DARROW  =>
 ASSIGN  <-
