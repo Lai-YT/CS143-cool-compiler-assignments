@@ -224,6 +224,7 @@ SINGLE_OP  [-+*\/:~<=(){};.,@]
   \\t  str_buf[str_len++] = '\t';
   \\n  str_buf[str_len++] = '\n';
   \\f  str_buf[str_len++] = '\f';
+  \\\\ str_buf[str_len++] = '\\';
 }
 <STRING>\\\"  { /* escaped quote */
   str_buf[str_len++] = '"';

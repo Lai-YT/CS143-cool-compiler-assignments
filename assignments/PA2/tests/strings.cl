@@ -12,6 +12,9 @@
 "\f"
 "\1"
 
+"\\"
+"\\n\");\n"
+
 "this is a string with \"escape\" quotes"
 
 "this is a string that spans \
