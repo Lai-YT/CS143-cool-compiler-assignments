@@ -101,8 +101,9 @@ OBJECT_ID [a-zA-Z][a-zA-Z0-9_]*
 
 DARROW  =>
 ASSIGN  <-
+LE  <=
 /* - and / has to be escaped */
-SINGLE_OP  [-+*\/:~<>=(){};.,]
+SINGLE_OP  [-+*\/:~<=(){};.,@]
 
 %%
 
@@ -153,8 +154,9 @@ SINGLE_OP  [-+*\/:~<>=(){};.,]
  /*
   *  The multiple-character operators.
   */
-{DARROW}  { return (DARROW); }
-{ASSIGN}  { return (ASSIGN); }
+{DARROW}  return (DARROW);
+{ASSIGN}  return (ASSIGN);
+{LE}  return (LE);
 
  /*
   * The single-character operators.
@@ -258,6 +260,11 @@ SINGLE_OP  [-+*\/:~<>=(){};.,]
   cool_yylval.error_msg = "Unterminated string constant";
   BEGIN(INITIAL);
   ResetStrBuf();
+  return ERROR;
+}
+
+. {
+  yylval.error_msg = yytext;
   return ERROR;
 }
 %%
