@@ -8,6 +8,14 @@ cLaSs Main {
     att_R1 <- 0
   };
 
+  CapitalizedMethodNameShouldBeTypeId() : Int {
+    0
+  };
+
+  self_type_should_be_object_id() : SELF_TYPE {
+    self
+  };
+
   tryKeywordFalse() : Bool {
     false
   };

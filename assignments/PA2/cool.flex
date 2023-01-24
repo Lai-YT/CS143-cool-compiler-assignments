@@ -95,9 +95,9 @@ DIGIT [0-9]
 KEYWORD (?i:class|else|fi|if|in|inherits|isvoid|let|loop|pool|then|while|case|esac|new|of|not)
 BOOL  t(?i:rue)|f(?i:alse)
 
-TYPE_ID Object|Bool|Int|String|SELF_TYPE|self
 /* XXX: "character class expressions" aren't working correctly */
-OBJECT_ID [a-zA-Z][a-zA-Z0-9_]*
+TYPEID [A-Z][a-zA-Z0-9_]*
+OBJECTID [a-zA-Z][a-zA-Z0-9_]*
 
 DARROW  =>
 ASSIGN  <-
@@ -203,12 +203,11 @@ SINGLE_OP  [-+*\/:~<=(){};.,@]
  /*
   * Identifiers.
   */
-{TYPE_ID} {
+{TYPEID} {
   cool_yylval.symbol = idtable.add_string(yytext);
   return TYPEID;
 }
- /* TODO: OBJECTID after CLASS should be a TYPEID */
-{OBJECT_ID} {
+{OBJECTID} {
   cool_yylval.symbol = idtable.add_string(yytext);
   return OBJECTID;
 }

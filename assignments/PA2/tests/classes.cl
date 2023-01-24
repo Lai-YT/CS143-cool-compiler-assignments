@@ -14,6 +14,8 @@ class A {
 
 class B {};
 
+class inherits {};
+
 class Main {
 
   main() : Object {
