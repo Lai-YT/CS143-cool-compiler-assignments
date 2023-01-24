@@ -49,6 +49,7 @@ extern YYSTYPE cool_yylval;
 #include <stdbool.h>
 #include <stddef.h> /* size_t */
 #include <stdlib.h> /* atoi */
+#include <string.h> /* strncpy */
 
 typedef struct {
   char *keyword;
@@ -74,10 +75,17 @@ void ShouldNotReachHere() {
 
 bool in_one_line_comment = false;
 int nested_comment_level = 0;
+char str_buf[MAX_STR_CONST]; /* MAX_STR_CONST - 1 available */
+size_t str_len = 0;
+
+void ResetStrBuf() {
+  str_len = 0;
+  str_buf[0] = '\0';
+}
 
 %}
 
-%x COMMENT
+%x COMMENT STRING
 /*
  * Define names for regular expressions here.
  */
@@ -202,6 +210,37 @@ SINGLE_OP  [-+*\/:~<>=(){};.,]
   *  \n \t \b \f, the result is c.
   *
   */
- /* TODO: string constants */
-
+\"  BEGIN(STRING);
+<STRING>{
+  \\b  str_buf[str_len++] = '\b';
+  \\t  str_buf[str_len++] = '\t';
+  \\n  str_buf[str_len++] = '\n';
+  \\f  str_buf[str_len++] = '\f';
+}
+<STRING>\\\"  { /* escaped quote */
+  str_buf[str_len++] = '"';
+}
+<STRING>\\\n  { /* escaped newline */
+  str_buf[str_len++] = '\n';
+  curr_lineno++;
+}
+<STRING>\\  ; /* eat up since "\c" is equivalent to "c" with those above excluded */
+<STRING>[^\\"]+ {
+  if (str_len + yyleng > MAX_STR_CONST - 1) {
+    /* TODO: string too long error */
+  }
+  strncpy(str_buf + str_len, yytext, yyleng);
+  str_len += yyleng;
+}
+<STRING>\"  {
+  str_buf[str_len] = '\0';
+  cool_yylval.symbol = idtable.add_string(str_buf);
+  BEGIN(INITIAL);
+  ResetStrBuf();
+  return STR_CONST;
+}
+<STRING>\n  {
+  /* TODO: Unterminated string constant error */
+  BEGIN(INITIAL);
+}
 %%
