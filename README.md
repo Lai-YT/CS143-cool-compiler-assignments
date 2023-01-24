@@ -9,7 +9,7 @@ Each assignment will ultimately result in a working compiler phase which can int
 | PA  | brief  | status |
 |-----|--------|--------|
 | [PA1](handouts/PA1.pdf) | acquaint with the *Cool* language | [done](assignments/PA1/) |
-| [PA2](handouts/PA2.pdf) | lexical analyzer with *flex* | [in progress](assignments/PA2/) |
+| [PA2](handouts/PA2.pdf) | lexical analyzer with *flex* | [test passed](assignments/PA2/) |
 | [PA3](handouts/PA3.pdf) |        | to do |
 | [PA4](handouts/PA4.pdf) |        | to do |
 | [PA5](handouts/PA5.pdf) |        | to do |
