@@ -93,7 +93,7 @@ void ResetStrBuf() {
 DIGIT [0-9]
 
 KEYWORD (?i:class|else|fi|if|in|inherits|isvoid|let|loop|pool|then|while|case|esac|new|of|not)
-BOOL  [Tt]rue|[Ff]alse
+BOOL  t(?i:rue)|f(?i:alse)
 
 TYPE_ID Object|Bool|Int|String|SELF_TYPE|self
 /* XXX: "character class expressions" aren't working correctly */
@@ -188,8 +188,10 @@ SINGLE_OP  [-+*\/:~<=(){};.,@]
   ToLowerStr(yytext);
   if (strcmp(yytext, "false") == 0) {
     cool_yylval.boolean = false;
+    return BOOL_CONST;
   } else if (strcmp(yytext, "true") == 0) {
     cool_yylval.boolean = true;
+    return BOOL_CONST;
   }
   ShouldNotReachHere();
 }
