@@ -77,6 +77,7 @@ bool in_one_line_comment = false;
 int nested_comment_level = 0;
 char str_buf[MAX_STR_CONST]; /* MAX_STR_CONST - 1 available */
 size_t str_len = 0;
+bool is_too_long = false;
 
 void ResetStrBuf() {
   str_len = 0;
@@ -225,14 +226,23 @@ SINGLE_OP  [-+*\/:~<>=(){};.,]
   curr_lineno++;
 }
 <STRING>\\  ; /* eat up since "\c" is equivalent to "c" with those above excluded */
-<STRING>[^\\"]+ {
+<STRING>[^\\"\n]+ {
   if (str_len + yyleng > MAX_STR_CONST - 1) {
-    /* TODO: string too long error */
+    /* do nothing to eat up until the enclosed quote */
+    is_too_long = true;
+    break;
   }
   strncpy(str_buf + str_len, yytext, yyleng);
   str_len += yyleng;
 }
 <STRING>\"  {
+  if (is_too_long) {
+    cool_yylval.error_msg = "String constant too long";
+    BEGIN(INITIAL);
+    ResetStrBuf();
+    is_too_long = false;
+    return ERROR;
+  }
   str_buf[str_len] = '\0';
   cool_yylval.symbol = idtable.add_string(str_buf);
   BEGIN(INITIAL);
@@ -240,7 +250,10 @@ SINGLE_OP  [-+*\/:~<>=(){};.,]
   return STR_CONST;
 }
 <STRING>\n  {
-  /* TODO: Unterminated string constant error */
+  curr_lineno++;
+  cool_yylval.error_msg = "Unterminated string constant";
   BEGIN(INITIAL);
+  ResetStrBuf();
+  return ERROR;
 }
 %%
