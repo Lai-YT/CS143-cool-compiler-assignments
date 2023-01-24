@@ -115,6 +115,10 @@ SINGLE_OP  [-+*\/:~<>=(){};.,]
     BEGIN(COMMENT);
   }
 }
+"*)"  {
+  yylval.error_msg = "Unmatched *)";
+  return ERROR;
+}
 <INITIAL,COMMENT>"(*"  {
   if (!in_one_line_comment) {
     nested_comment_level++;

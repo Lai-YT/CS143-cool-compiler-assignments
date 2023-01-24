@@ -24,6 +24,8 @@
  -- one line comment
  *)
 
+ *)
+
 (*
   this is a broken comment, should have EOF error
 )
