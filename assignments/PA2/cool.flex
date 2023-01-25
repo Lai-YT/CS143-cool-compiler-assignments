@@ -226,7 +226,7 @@ f(?i:alse)  cool_yylval.boolean = false; return BOOL_CONST;
   cool_yylval.error_msg = "Unterminated string constant";
   return ERROR;
 }
- /* XXX: there's an error call "String contains null character" but I don't know how to produce it */
+ /* XXX: there's an error called "String contains null character" but I don't know how to produce it */
 
 . {
   yylval.error_msg = yytext;
