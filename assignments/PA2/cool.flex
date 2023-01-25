@@ -75,13 +75,18 @@ void ShouldNotReachHere() {
 
 bool in_one_line_comment = false;
 int nested_comment_level = 0;
-char str_buf[MAX_STR_CONST]; /* MAX_STR_CONST - 1 available */
-size_t str_len = 0;
-bool is_too_long = false;
+
+bool str_is_too_long = false;
 
 void ResetStrBuf() {
-  str_len = 0;
-  str_buf[0] = '\0';
+  string_buf_ptr = string_buf;
+  *string_buf_ptr = '\0';
+  str_is_too_long = false;
+}
+
+bool StrWillRunOutOfRange(size_t length_to_append) {
+  return string_buf_ptr + length_to_append
+      > string_buf + MAX_STR_CONST - 1;
 }
 
 %}
@@ -218,41 +223,40 @@ SINGLE_OP  [-+*\/:~<=(){};.,@]
   *  \n \t \b \f, the result is c.
   *
   */
-\"  BEGIN(STRING);
+\"  BEGIN(STRING); ResetStrBuf();
 <STRING>{
-  \\b  str_buf[str_len++] = '\b';
-  \\t  str_buf[str_len++] = '\t';
-  \\n  str_buf[str_len++] = '\n';
-  \\f  str_buf[str_len++] = '\f';
-  \\\\ str_buf[str_len++] = '\\';
+  \\b  *string_buf_ptr++ = '\b';
+  \\t  *string_buf_ptr++ = '\t';
+  \\n  *string_buf_ptr++ = '\n';
+  \\f  *string_buf_ptr++ = '\f';
+  \\\\ *string_buf_ptr++ = '\\';
 }
 <STRING>\\\"  { /* escaped quote */
-  str_buf[str_len++] = '"';
+  *string_buf_ptr++ = '"';
 }
 <STRING>\\\n  { /* escaped newline */
-  str_buf[str_len++] = '\n';
+  *string_buf_ptr++ = '\n';
   curr_lineno++;
 }
 <STRING>\\  ; /* eat up since "\c" is equivalent to "c" with those above excluded */
 <STRING>[^\\"\n]+ {
-  if (str_len + yyleng > MAX_STR_CONST - 1) {
+  if (StrWillRunOutOfRange(yyleng)) {
     /* do nothing to eat up until the enclosed quote */
-    is_too_long = true;
+    str_is_too_long = true;
     break;
   }
-  strncpy(str_buf + str_len, yytext, yyleng);
-  str_len += yyleng;
+  strncpy(string_buf_ptr, yytext, yyleng);
+  string_buf_ptr += yyleng;
 }
 <STRING>\"  {
-  if (is_too_long) {
+  if (str_is_too_long) {
     cool_yylval.error_msg = "String constant too long";
     BEGIN(INITIAL);
     ResetStrBuf();
-    is_too_long = false;
     return ERROR;
   }
-  str_buf[str_len] = '\0';
-  cool_yylval.symbol = idtable.add_string(str_buf);
+  *string_buf_ptr = '\0';
+  cool_yylval.symbol = idtable.add_string(string_buf);
   BEGIN(INITIAL);
   ResetStrBuf();
   return STR_CONST;
