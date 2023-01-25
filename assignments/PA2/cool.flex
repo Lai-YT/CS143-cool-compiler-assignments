@@ -45,37 +45,10 @@ extern YYSTYPE cool_yylval;
  *  Add Your own definitions here
  */
 #include <assert.h>
-#include <ctype.h> /* tolower */
 #include <stdbool.h>
 #include <stddef.h> /* size_t */
 #include <stdlib.h> /* atoi */
 #include <string.h> /* strncpy */
-
-/*
- * For keywords.
- */
-
-typedef struct {
-  char *keyword;
-  int code;
-} KeywordAndCode;
-
-KeywordAndCode keywords[] = {
-  {"class", CLASS}, {"else", ELSE}, {"fi", FI}, {"if", IF}, {"in", IN},
-  {"inherits", INHERITS}, {"isvoid", ISVOID}, {"let", LET}, {"loop", LOOP},
-  {"pool", POOL}, {"then", THEN}, {"while", WHILE}, {"case", CASE}, {"esac", ESAC},
-  {"new", NEW}, {"of", OF}, {"not", NOT},
-};
-
-void ToLowerStr(char *s) {
-  for (int i = 0; s[i]; i++) {
-    s[i] = tolower(s[i]);
-  }
-}
-
-void ShouldNotReachHere() {
-  assert(0);
-}
 
 /*
  * For nested comments.
@@ -100,13 +73,12 @@ bool StrWillRunOutOfRange(size_t length_to_append) {
 %}
 
 %x INLINE_COMMENT NESTED_COMMENT STRING TOO_LONG_STRING
+
 /*
  * Define names for regular expressions here.
  */
-DIGIT [0-9]
 
-KEYWORD (?i:class|else|fi|if|in|inherits|isvoid|let|loop|pool|then|while|case|esac|new|of|not)
-BOOL  t(?i:rue)|f(?i:alse)
+DIGIT [0-9]
 
 /* XXX: "character class expressions" aren't working correctly */
 TYPEID [A-Z][a-zA-Z0-9_]*
@@ -164,26 +136,29 @@ SINGLE_OP  [-+*\/:~<=(){};.,@]
   * Keywords are case-insensitive except for the values true and false,
   * which must begin with a lower-case letter.
   */
-{KEYWORD} {
-  ToLowerStr(yytext);
-  for (size_t i = 0; i < sizeof(keywords)/sizeof(KeywordAndCode); i++) {
-    if (strcmp(yytext, keywords[i].keyword) == 0) {
-      return keywords[i].code;
-    }
-  }
-  ShouldNotReachHere();
-}
-{BOOL} {
-  ToLowerStr(yytext);
-  if (strcmp(yytext, "false") == 0) {
-    cool_yylval.boolean = false;
-    return BOOL_CONST;
-  } else if (strcmp(yytext, "true") == 0) {
-    cool_yylval.boolean = true;
-    return BOOL_CONST;
-  }
-  ShouldNotReachHere();
-}
+(?i:class) return CLASS;
+(?i:else) return ELSE;
+(?i:fi) return FI;
+(?i:if) return IF;
+(?i:in) return IN;
+(?i:inherits) return INHERITS;
+(?i:isvoid) return ISVOID;
+(?i:let)  return LET;
+(?i:loop) return LOOP;
+(?i:pool) return POOL;
+(?i:then) return THEN;
+(?i:while)  return WHILE;
+(?i:case) return CASE;
+(?i:esac) return ESAC;
+(?i:new)  return NEW;
+(?i:of) return OF;
+(?i:not)  return NOT;
+
+ /*
+  * Booleans.
+  */
+t(?i:rue)   cool_yylval.boolean = true;  return BOOL_CONST;
+f(?i:alse)  cool_yylval.boolean = false; return BOOL_CONST;
 
  /*
   * Integers.
