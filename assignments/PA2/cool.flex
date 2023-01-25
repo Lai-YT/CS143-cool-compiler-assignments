@@ -156,7 +156,6 @@ SINGLE_OP  [-+*\/:~<=(){};.,@]
   * The single-character operators.
   */
 {SINGLE_OP} {
-  cool_yylval.symbol = idtable.add_string(yytext);
   assert(!yytext[1]);
   return yytext[0];
 }
@@ -166,8 +165,6 @@ SINGLE_OP  [-+*\/:~<=(){};.,@]
   * which must begin with a lower-case letter.
   */
 {KEYWORD} {
-  cool_yylval.symbol = idtable.add_string(yytext);
-
   ToLowerStr(yytext);
   for (size_t i = 0; i < sizeof(keywords)/sizeof(KeywordAndCode); i++) {
     if (strcmp(yytext, keywords[i].keyword) == 0) {
@@ -177,8 +174,6 @@ SINGLE_OP  [-+*\/:~<=(){};.,@]
   ShouldNotReachHere();
 }
 {BOOL} {
-  idtable.add_string(yytext);
-
   ToLowerStr(yytext);
   if (strcmp(yytext, "false") == 0) {
     cool_yylval.boolean = false;
@@ -189,6 +184,10 @@ SINGLE_OP  [-+*\/:~<=(){};.,@]
   }
   ShouldNotReachHere();
 }
+
+ /*
+  * Integers.
+  */
 {DIGIT}+  {
   cool_yylval.symbol = inttable.add_int(atoi(yytext));
   return INT_CONST;
