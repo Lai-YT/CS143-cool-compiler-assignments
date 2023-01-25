@@ -51,6 +51,10 @@ extern YYSTYPE cool_yylval;
 #include <stdlib.h> /* atoi */
 #include <string.h> /* strncpy */
 
+/*
+ * For keywords.
+ */
+
 typedef struct {
   char *keyword;
   int code;
@@ -73,15 +77,19 @@ void ShouldNotReachHere() {
   assert(0);
 }
 
-bool in_one_line_comment = false;
-int nested_comment_level = 0;
+/*
+ * For nested comments.
+ */
 
-bool str_is_too_long = false;
+int comment_level = 0;
+
+/*
+ * For string constants.
+ */
 
 void ResetStrBuf() {
   string_buf_ptr = string_buf;
   *string_buf_ptr = '\0';
-  str_is_too_long = false;
 }
 
 bool StrWillRunOutOfRange(size_t length_to_append) {
@@ -91,7 +99,7 @@ bool StrWillRunOutOfRange(size_t length_to_append) {
 
 %}
 
-%x COMMENT STRING
+%x INLINE_COMMENT NESTED_COMMENT STRING TOO_LONG_STRING
 /*
  * Define names for regular expressions here.
  */
@@ -115,39 +123,20 @@ SINGLE_OP  [-+*\/:~<=(){};.,@]
  /*
   *  Nested comments
   */
---  {
-  if (!in_one_line_comment) {
-    in_one_line_comment = true;
-    BEGIN(COMMENT);
-  }
-}
+--  BEGIN(INLINE_COMMENT);
+"(*"  comment_level = 1; BEGIN(NESTED_COMMENT);
 "*)"  {
   yylval.error_msg = "Unmatched *)";
   return ERROR;
 }
-<INITIAL,COMMENT>"(*"  {
-  if (!in_one_line_comment) {
-    nested_comment_level++;
-    BEGIN(COMMENT);
-  }
-}
-<COMMENT>"*)" {
-  if (!in_one_line_comment
-      && --nested_comment_level == 0) {
-    BEGIN(INITIAL);
-  }
-}
-<COMMENT>\n {
-  curr_lineno++;
-  if (in_one_line_comment) {
-    in_one_line_comment = false;
-    BEGIN(INITIAL);
-  }
-}
-<COMMENT>.  ; /* eat up */
-<COMMENT><<EOF>> {
-  /* change back to INITIAL so next scan will trigger the yyterminate()
-    instead of stuck in the infinite loop */
+<NESTED_COMMENT>"(*"  comment_level++;
+<NESTED_COMMENT>"*)"  if (!--comment_level) { BEGIN(INITIAL); }
+<NESTED_COMMENT>\n  curr_lineno++;
+<INLINE_COMMENT>\n  curr_lineno++; BEGIN(INITIAL);
+<INLINE_COMMENT,NESTED_COMMENT>.  ; /* eat up */
+<INLINE_COMMENT,NESTED_COMMENT><<EOF>> {
+  /* change back to INITIAL so the next scan will trigger the yyterminate()
+    instead of being stuck in the infinite loop */
   BEGIN(INITIAL);
   yylval.error_msg = "EOF in comment";
   return ERROR;
@@ -223,12 +212,10 @@ SINGLE_OP  [-+*\/:~<=(){};.,@]
   *  \n \t \b \f, the result is c.
   *
   */
-\"  BEGIN(STRING); ResetStrBuf();
+\"  ResetStrBuf(); BEGIN(STRING);
 <STRING>\\(.|\n) {
   if (StrWillRunOutOfRange(1)) {
-    str_is_too_long = true;
-  }
-  if (str_is_too_long) {
+    BEGIN(TOO_LONG_STRING);
     break;
   }
   switch (yytext[1]) {
@@ -242,32 +229,35 @@ SINGLE_OP  [-+*\/:~<=(){};.,@]
     default:   *string_buf_ptr++ = yytext[1]; break;
   }
 }
+<TOO_LONG_STRING>\\.  ; /* no more recording */
+<TOO_LONG_STRING>\\\n curr_lineno++;
 <STRING>[^\\"\n]+ {
   if (StrWillRunOutOfRange(yyleng)) {
-    str_is_too_long = true;
-  }
-  if (str_is_too_long) {
-    break; /* do nothing to eat up until the enclosed quote */
+    BEGIN(TOO_LONG_STRING);
+    break;
   }
   strncpy(string_buf_ptr, yytext, yyleng);
   string_buf_ptr += yyleng;
 }
+<TOO_LONG_STRING>[^\\"\n]+  ;
 <STRING>\"  {
   BEGIN(INITIAL);
-  if (str_is_too_long) {
-    cool_yylval.error_msg = "String constant too long";
-    return ERROR;
-  }
   *string_buf_ptr = '\0';
   cool_yylval.symbol = idtable.add_string(string_buf);
   return STR_CONST;
 }
-<STRING>\n  {
+<TOO_LONG_STRING>\" {
+  BEGIN(INITIAL);
+  cool_yylval.error_msg = "String constant too long";
+  return ERROR;
+}
+<STRING,TOO_LONG_STRING>\n  {
   BEGIN(INITIAL);
   curr_lineno++;
   cool_yylval.error_msg = "Unterminated string constant";
   return ERROR;
 }
+ /* XXX: there's an error call "String contains null character" but I don't know how to produce it */
 
 . {
   yylval.error_msg = yytext;
