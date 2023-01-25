@@ -11,6 +11,7 @@
 "\b"
 "\f"
 "\1"
+"\x"
 
 "\\"
 "\\n\");\n"
@@ -27,6 +28,7 @@ constant"
 
 "string of length 1024 is ok                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            1024 safe"
 "string of length 1025 is too long                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       1025 boom"
+"string of length 1025 with the last character be special character is also too long                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     special \n"
 
 class Main {
 

@@ -224,48 +224,48 @@ SINGLE_OP  [-+*\/:~<=(){};.,@]
   *
   */
 \"  BEGIN(STRING); ResetStrBuf();
-<STRING>{
-  \\b  *string_buf_ptr++ = '\b';
-  \\t  *string_buf_ptr++ = '\t';
-  \\n  *string_buf_ptr++ = '\n';
-  \\f  *string_buf_ptr++ = '\f';
-  \\\\ *string_buf_ptr++ = '\\';
+<STRING>\\(.|\n) {
+  if (StrWillRunOutOfRange(1)) {
+    str_is_too_long = true;
+  }
+  if (str_is_too_long) {
+    break;
+  }
+  switch (yytext[1]) {
+    case 'b':  *string_buf_ptr++ = '\b'; break;
+    case 't':  *string_buf_ptr++ = '\t'; break;
+    case 'n':  *string_buf_ptr++ = '\n'; break;
+    case 'f':  *string_buf_ptr++ = '\f'; break;
+    case '\"': *string_buf_ptr++ = '"';  break;
+    case '\\': *string_buf_ptr++ = '\\'; break;
+    case '\n': *string_buf_ptr++ = '\n'; curr_lineno++; break;
+    default:   *string_buf_ptr++ = yytext[1]; break;
+  }
 }
-<STRING>\\\"  { /* escaped quote */
-  *string_buf_ptr++ = '"';
-}
-<STRING>\\\n  { /* escaped newline */
-  *string_buf_ptr++ = '\n';
-  curr_lineno++;
-}
-<STRING>\\  ; /* eat up since "\c" is equivalent to "c" with those above excluded */
 <STRING>[^\\"\n]+ {
   if (StrWillRunOutOfRange(yyleng)) {
-    /* do nothing to eat up until the enclosed quote */
     str_is_too_long = true;
-    break;
+  }
+  if (str_is_too_long) {
+    break; /* do nothing to eat up until the enclosed quote */
   }
   strncpy(string_buf_ptr, yytext, yyleng);
   string_buf_ptr += yyleng;
 }
 <STRING>\"  {
+  BEGIN(INITIAL);
   if (str_is_too_long) {
     cool_yylval.error_msg = "String constant too long";
-    BEGIN(INITIAL);
-    ResetStrBuf();
     return ERROR;
   }
   *string_buf_ptr = '\0';
   cool_yylval.symbol = idtable.add_string(string_buf);
-  BEGIN(INITIAL);
-  ResetStrBuf();
   return STR_CONST;
 }
 <STRING>\n  {
+  BEGIN(INITIAL);
   curr_lineno++;
   cool_yylval.error_msg = "Unterminated string constant";
-  BEGIN(INITIAL);
-  ResetStrBuf();
   return ERROR;
 }
 
