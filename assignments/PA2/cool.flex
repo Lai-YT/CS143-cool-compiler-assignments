@@ -44,7 +44,6 @@ extern YYSTYPE cool_yylval;
 /*
  *  Add Your own definitions here
  */
-#include <assert.h>
 #include <stdbool.h>
 #include <stddef.h> /* size_t */
 #include <stdlib.h> /* atoi */
@@ -78,16 +77,15 @@ bool StrWillRunOutOfRange(size_t length_to_append) {
  * Define names for regular expressions here.
  */
 
-DIGIT [0-9]
+DIGIT  [0-9]
 
 /* XXX: "character class expressions" aren't working correctly */
-TYPEID [A-Z][a-zA-Z0-9_]*
-OBJECTID [a-zA-Z][a-zA-Z0-9_]*
+TYPEID  [A-Z][a-zA-Z0-9_]*
+OBJECTID  [a-zA-Z][a-zA-Z0-9_]*
 
 DARROW  =>
 ASSIGN  <-
 LE  <=
-/* - and / has to be escaped */
 SINGLE_OP  [-+*\/:~<=(){};.,@]
 
 %%
@@ -97,7 +95,7 @@ SINGLE_OP  [-+*\/:~<=(){};.,@]
   */
 --  BEGIN(INLINE_COMMENT);
 "(*"  comment_level = 1; BEGIN(NESTED_COMMENT);
-"*)"  {
+"*)" {
   yylval.error_msg = "Unmatched *)";
   return ERROR;
 }
@@ -120,38 +118,35 @@ SINGLE_OP  [-+*\/:~<=(){};.,@]
  /*
   *  The multiple-character operators.
   */
-{DARROW}  return (DARROW);
-{ASSIGN}  return (ASSIGN);
-{LE}  return (LE);
+{DARROW}  return DARROW;
+{ASSIGN}  return ASSIGN;
+{LE}  return LE;
 
  /*
   * The single-character operators.
   */
-{SINGLE_OP} {
-  assert(!yytext[1]);
-  return yytext[0];
-}
+{SINGLE_OP}  return yytext[0];
 
  /*
   * Keywords are case-insensitive except for the values true and false,
   * which must begin with a lower-case letter.
   */
-(?i:class) return CLASS;
-(?i:else) return ELSE;
-(?i:fi) return FI;
-(?i:if) return IF;
-(?i:in) return IN;
-(?i:inherits) return INHERITS;
-(?i:isvoid) return ISVOID;
+(?i:class)  return CLASS;
+(?i:else)  return ELSE;
+(?i:fi)  return FI;
+(?i:if)  return IF;
+(?i:in)  return IN;
+(?i:inherits)  return INHERITS;
+(?i:isvoid)  return ISVOID;
 (?i:let)  return LET;
-(?i:loop) return LOOP;
-(?i:pool) return POOL;
-(?i:then) return THEN;
+(?i:loop)  return LOOP;
+(?i:pool)  return POOL;
+(?i:then)  return THEN;
 (?i:while)  return WHILE;
-(?i:case) return CASE;
-(?i:esac) return ESAC;
+(?i:case)  return CASE;
+(?i:esac)  return ESAC;
 (?i:new)  return NEW;
-(?i:of) return OF;
+(?i:of)  return OF;
 (?i:not)  return NOT;
 
  /*
@@ -163,7 +158,7 @@ f(?i:alse)  cool_yylval.boolean = false; return BOOL_CONST;
  /*
   * Integers.
   */
-{DIGIT}+  {
+{DIGIT}+ {
   cool_yylval.symbol = inttable.add_int(atoi(yytext));
   return INT_CONST;
 }
@@ -204,7 +199,7 @@ f(?i:alse)  cool_yylval.boolean = false; return BOOL_CONST;
   }
 }
 <TOO_LONG_STRING>\\.  ; /* no more recording */
-<TOO_LONG_STRING>\\\n curr_lineno++;
+<TOO_LONG_STRING>\\\n  curr_lineno++;
 <STRING>[^\\"\n]+ {
   if (StrWillRunOutOfRange(yyleng)) {
     BEGIN(TOO_LONG_STRING);
@@ -213,8 +208,8 @@ f(?i:alse)  cool_yylval.boolean = false; return BOOL_CONST;
   strncpy(string_buf_ptr, yytext, yyleng);
   string_buf_ptr += yyleng;
 }
-<TOO_LONG_STRING>[^\\"\n]+  ;
-<STRING>\"  {
+<TOO_LONG_STRING>[^\\"\n]+  ; /* eat up */
+<STRING>\" {
   BEGIN(INITIAL);
   *string_buf_ptr = '\0';
   cool_yylval.symbol = idtable.add_string(string_buf);
@@ -225,7 +220,7 @@ f(?i:alse)  cool_yylval.boolean = false; return BOOL_CONST;
   cool_yylval.error_msg = "String constant too long";
   return ERROR;
 }
-<STRING,TOO_LONG_STRING>\n  {
+<STRING,TOO_LONG_STRING>\n {
   BEGIN(INITIAL);
   curr_lineno++;
   cool_yylval.error_msg = "Unterminated string constant";
