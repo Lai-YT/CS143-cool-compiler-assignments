@@ -192,13 +192,9 @@ feature_list:
   /* empty */
   { $$ = nil_Features(); }
 | feature
-  {
-    $$ = single_Features($1);
-  }
+  { $$ = single_Features($1); }
 | feature_list feature
-  {
-    $$ = append_Features($1, single_Features($2));
-  }
+  { $$ = append_Features($1, single_Features($2)); }
 ;
 
 feature:
@@ -218,19 +214,14 @@ feature:
 
 formal_list:
   /* Syntax:
-   * formal_list ::= formal [[, formal]]*
-   *              |  epsilon
+   * formal_list ::= [ formal [[, formal]]* ]
    */
   /* empty */
   { $$ = nil_Formals(); }
 | formal
-  {
-    $$ = single_Formals($1);
-  }
+  { $$ = single_Formals($1); }
 | formal_list ',' formal
-  {
-    $$ = append_Formals($1, single_Formals($3));
-  }
+  { $$ = append_Formals($1, single_Formals($3)); }
 ;
 
 formal:
