@@ -132,7 +132,7 @@
 %type <feature> feature
 %type <formals> formal_list
 %type <formal> formal
-%type <expressions> expr_list
+%type <expressions> expr_list semi_colon_separated_expr_list
 %type <expression> expr
 
 /* Precedence declarations go here. */
@@ -244,6 +244,16 @@ expr_list:
   { $$ = append_Expressions($1, single_Expressions($3)); }
 ;
 
+semi_colon_separated_expr_list:
+  /* Syntax:
+   * semi_colon_separated_expr_list ::= [[expr;]]+
+   */
+  expr ';'
+  { $$ = single_Expressions($1); }
+| semi_colon_separated_expr_list expr ';'
+  { $$ = append_Expressions($1, single_Expressions($2)); }
+;
+
 expr:
   /* Syntax:
    * expr ::= ID <- expr
@@ -293,11 +303,10 @@ expr:
 | WHILE expr LOOP expr POOL
   { $$ = loop($2, $4); }
   /*
-   * expr ::= { [[expr;]]+ }
-   * TODO: expression list with ';' as delimiter
+   * expr ::= { semi_colon_separated_expr_list }
    */
-| '{' '}'
-  {}
+| '{' semi_colon_separated_expr_list '}'
+  { $$ = block($2); }
   /*
    * expr ::= let ID : TYPE [ <- expr ] [[ ,ID : TYPE [ <- expr ] ]]* in expr
    * TODO: arbitrarily many [[ ,ID : TYPE [ <- expr ] ]]*
