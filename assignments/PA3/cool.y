@@ -72,7 +72,7 @@
   extern int yylex();           /*  the entry point to the lexer  */
 
   /************************************************************************/
-  /*                DONT CHANGE ANYTHING IN THIS SECTION                  */
+  /*                DON'T CHANGE ANYTHING IN THIS SECTION                  */
 
   Program ast_root;             /* the result of the parse  */
   Classes parse_results;        /* for use in semantic analysis */
@@ -133,6 +133,8 @@
 %type <formals> formal_list
 %type <formal> formal
 %type <expressions> expr_list semi_colon_separated_expr_list
+/* not a typo, it's indeed a single expression */
+%type <expression> trailing_let comma_separated_let_list
 %type <expression> expr
 
 /* Precedence declarations go here. */
@@ -254,6 +256,74 @@ semi_colon_separated_expr_list:
   { $$ = append_Expressions($1, single_Expressions($2)); }
 ;
 
+/*
+ * Let
+ *
+ * The let construct with the following syntax has multiple forms thus sophisticated.
+ *    expr ::= let ID : TYPE [ <- expr ] [[ , ID : TYPE [ <- expr ] ]]* in expr
+ * So pull it out as an individual section.
+ */
+expr:
+  /* Syntax:
+   * expr ::= let ID : TYPE [ <- expr ] in expr  --- (a)
+   *       |  let ID : TYPE [ <- expr ] [[ , ID : TYPE [ <- expr ] ]]+ in expr  --- (b)
+   *
+   * NOTE:
+   *  (1) The reference Cool compiler doesn't support such comma-separated
+   *      multiple IDs. It support only the above syntax (a), but we'll support
+   *      (b) since the manual says so.
+   *  (2) As an implementation detail, multiple IDs are not supported by a
+   *      single let constructor in our AST, so we'll have to decompose the
+   *      comma-separated ID list into multiple let constructs.
+   *
+   * TODO: The Cool let construct introduces an ambiguity into the language.
+   *  The manual resolves the ambiguity by saying that a let expression extends
+   *  as far to the right as possible.
+   */
+   /*
+    * Syntax (a).
+    */
+LET OBJECTID ':' TYPEID IN expr
+  { $$ = let($2, $4, no_expr(), $6); }
+| LET OBJECTID ':' TYPEID ASSIGN expr IN expr
+  { $$ = let($2, $4, $6, $8); }
+   /*
+    * Syntax (b).
+    * Equivalent to expr ::= comma_separated_let_list
+    */
+| comma_separated_let_list
+  { $$ = $1; }
+;
+
+comma_separated_let_list:
+  /* Syntax:
+   * leading_let ::= let ID : TYPE [ <- expr ] trailing_let
+   *
+   * As an implementation detail, we treat as if there's an IN before the
+   * trailing_let.
+   */
+  LET OBJECTID ':' TYPEID trailing_let
+  { $$ = let($2, $4, no_expr(), $5); }
+| LET OBJECTID ':' TYPEID ASSIGN expr trailing_let
+  { $$ = let($2, $4, $6, $7); }
+;
+
+trailing_let:
+  /* Syntax:
+   * trailing_let ::= [[ , ID : TYPE [ <- expr ] ]]+ in expr
+   *
+   * As an implementation detail, we treat ',' as LET to decompose them.
+   */
+  ',' OBJECTID ':' TYPEID IN expr
+  { $$ = let($2, $4, no_expr(), $6); }
+| ',' OBJECTID ':' TYPEID ASSIGN expr IN expr
+  { $$ = let($2, $4, $6, $8); }
+| ',' OBJECTID ':' TYPEID trailing_let
+  { $$ = let($2, $4, no_expr(), $5); }
+| ',' OBJECTID ':' TYPEID ASSIGN expr trailing_let
+  { $$ = let($2, $4, $6, $7); }
+;
+
 expr:
   /* Syntax:
    * expr ::= ID <- expr
@@ -308,18 +378,10 @@ expr:
 | '{' semi_colon_separated_expr_list '}'
   { $$ = block($2); }
   /*
-   * expr ::= let ID : TYPE [ <- expr ] [[ ,ID : TYPE [ <- expr ] ]]* in expr
-   * TODO: arbitrarily many [[ ,ID : TYPE [ <- expr ] ]]*
-   */
-| LET OBJECTID ':' TYPEID IN expr
-  {}
-| LET OBJECTID ':' TYPEID ASSIGN expr IN expr
-  {}
-  /*
    * expr ::= case expr of [[ID : TYPE => expr; ]]+ esac
    * TODO: arbitrarily many [[ID : TYPE => expr; ]]+
    */
-  CASE expr OF OBJECTID ':' TYPEID DARROW expr ';' ESAC
+| CASE expr OF OBJECTID ':' TYPEID DARROW expr ';' ESAC
   {}
   /*
    * expr ::= new TYPE
