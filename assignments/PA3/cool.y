@@ -233,9 +233,146 @@ formal:
 ;
 
 expr_list:
+  /* Syntax:
+   * expr_list ::= [ expr [[, expr]]* ]
+   */
+  /* empty */
+  { $$ = nil_Expressions(); }
+| expr
+  { $$ = single_Expressions($1); }
+| expr_list ',' expr
+  { $$ = append_Expressions($1, single_Expressions($3)); }
 ;
 
 expr:
+  /* Syntax:
+   * expr ::= ID <- expr
+   */
+  OBJECTID ASSIGN expr
+  { $$ = assign($1, $3); }
+  /*
+   * expr ::= expr[@TYPE].ID( [ expr [[, expr]]* ] )
+   */
+| expr '.' OBJECTID '(' ')'
+  { $$ = dispatch($1, $3, nil_Expressions()); }
+| expr '@' TYPEID '.' OBJECTID '(' ')'
+  { $$ = static_dispatch($1, $3, $5, nil_Expressions()); }
+| expr '.' OBJECTID '(' expr_list ')'
+  { $$ = dispatch($1, $3, $5); }
+| expr '@' TYPEID '.' OBJECTID '(' expr_list ')'
+  { $$ = static_dispatch($1, $3, $5, $7); }
+  /*
+   * expr ::= ID( [ expr [[, expr]]* ] )
+   * which is a shorthand for self.ID( [ expr [[, expr]]* ] ).
+   */
+| OBJECTID '(' ')'
+  {
+    $$ = dispatch(
+      /*  object identifier as expression */
+      object(idtable.add_string("self")),
+      $1,
+      nil_Expressions()
+    );
+  }
+| OBJECTID '(' expr_list ')'
+  {
+    $$ = dispatch(
+      object(idtable.add_string("self")),
+      $1,
+      $3
+    );
+  }
+  /*
+   * expr ::= if expr then expr else expr fi
+   */
+| IF expr THEN expr ELSE expr FI
+  { $$ = cond($2, $4, $6); }
+  /*
+   * expr ::= while expr loop expr pool
+   */
+| WHILE expr LOOP expr POOL
+  { $$ = loop($2, $4); }
+  /*
+   * expr ::= { [[expr;]]+ }
+   * TODO: expression list with ';' as delimiter
+   */
+| '{' '}'
+  {}
+  /*
+   * expr ::= let ID : TYPE [ <- expr ] [[ ,ID : TYPE [ <- expr ] ]]* in expr
+   * TODO: arbitrarily many [[ ,ID : TYPE [ <- expr ] ]]*
+   */
+| LET OBJECTID ':' TYPEID IN expr
+  {}
+| LET OBJECTID ':' TYPEID ASSIGN expr IN expr
+  {}
+  /*
+   * expr ::= case expr of [[ID : TYPE => expr; ]]+ esac
+   * TODO: arbitrarily many [[ID : TYPE => expr; ]]+
+   */
+  CASE expr OF OBJECTID ':' TYPEID DARROW expr ';' ESAC
+  {}
+  /*
+   * expr ::= new TYPE
+   */
+| NEW TYPEID
+  { $$ = new_($2); }
+  /*
+   * expr ::= isvoid expr
+   */
+| ISVOID expr
+  { $$ = isvoid($2); }
+  /*
+   * expr ::= expr + expr
+   *       |  expr - expr
+   *       |  expr * expr
+   *       |  expr / expr
+   *       |  ~expr
+   *       |  expr < expr
+   *       |  expr <= expr
+   *       |  expr = expr
+   */
+| expr '+' expr
+  { $$ = plus($1, $3); }
+| expr '-' expr
+  { $$ = sub($1, $3); }
+| expr '*' expr
+  { $$ = mul($1, $3); }
+| expr '/' expr
+  { $$ = divide($1, $3); }
+| '~' expr
+  { $$ = neg($2); }
+| expr '<' expr
+  { $$ = lt($1, $3); }
+| expr LE expr
+  { $$ = leq($1, $3); }
+| expr '=' expr
+  { $$ = eq($1, $3); }
+  /*
+   * expr ::= not expr
+   */
+| NOT expr
+  { $$ = comp($2); }
+  /*
+   * expr ::= (expr)
+   */
+| '(' expr ')'
+  { $$ = $2; }
+  /*
+   * expr ::= ID
+   *       |  integer
+   *       |  string
+   *       |  true
+   *       |  false
+   */
+| OBJECTID
+  { $$ = object($1); }
+| INT_CONST
+  { $$ = int_const($1); }
+| STR_CONST
+  { $$ = string_const($1); }
+| BOOL_CONST
+  { $$ = bool_const($1); }
 ;
 
 /* end of grammar */
