@@ -140,6 +140,15 @@
 %type <case_> case
 
 /* Precedence declarations go here. */
+%right ASSIGN
+%right NOT /* %precedence suffices but POSIX Yacc does not support */
+%left LE '<' '=' /* %precedence suffices but POSIX Yacc does not support */
+%left '+' '-'
+%left '*' '/'
+%left ISVOID
+%left '~'
+%left '@'
+%left '.'
 
 %%
 program:
