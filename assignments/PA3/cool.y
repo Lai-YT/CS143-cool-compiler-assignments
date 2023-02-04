@@ -136,6 +136,8 @@
 /* not a typo, it's indeed a single expression */
 %type <expression> trailing_let comma_separated_let_list
 %type <expression> expr
+%type <cases> case_list
+%type <case_> case
 
 /* Precedence declarations go here. */
 
@@ -378,11 +380,10 @@ expr:
 | '{' semi_colon_separated_expr_list '}'
   { $$ = block($2); }
   /*
-   * expr ::= case expr of [[ID : TYPE => expr; ]]+ esac
-   * TODO: arbitrarily many [[ID : TYPE => expr; ]]+
+   * expr ::= case expr of case_list esac
    */
-| CASE expr OF OBJECTID ':' TYPEID DARROW expr ';' ESAC
-  {}
+| CASE expr OF case_list ESAC
+  { $$ = typcase($2, $4); }
   /*
    * expr ::= new TYPE
    */
@@ -444,6 +445,24 @@ expr:
   { $$ = string_const($1); }
 | BOOL_CONST
   { $$ = bool_const($1); }
+;
+
+case_list:
+  /* Syntax:
+   * case_list ::= [[case]]+
+   */
+  case
+  { $$ = single_Cases($1); }
+| case_list case
+  { $$ = append_Cases($1, single_Cases($2)); }
+;
+
+case:
+  /* Syntax:
+   * case ::= ID : TYPE => expr;
+   */
+  OBJECTID ':' TYPEID DARROW expr ';'
+  { $$ = branch($1, $3, $5); }
 ;
 
 /* end of grammar */
