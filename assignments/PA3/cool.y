@@ -349,37 +349,18 @@ expr:
   OBJECTID ASSIGN expr
   { $$ = assign($1, $3); }
   /*
-   * expr ::= expr[@TYPE].ID( [ expr [[, expr]]* ] )
+   * expr ::= expr[@TYPE].ID( expr_list )
    */
-| expr '.' OBJECTID '(' ')'
-  { $$ = dispatch($1, $3, nil_Expressions()); }
-| expr '@' TYPEID '.' OBJECTID '(' ')'
-  { $$ = static_dispatch($1, $3, $5, nil_Expressions()); }
 | expr '.' OBJECTID '(' expr_list ')'
   { $$ = dispatch($1, $3, $5); }
 | expr '@' TYPEID '.' OBJECTID '(' expr_list ')'
   { $$ = static_dispatch($1, $3, $5, $7); }
   /*
-   * expr ::= ID( [ expr [[, expr]]* ] )
-   * which is a shorthand for self.ID( [ expr [[, expr]]* ] ).
+   * expr ::= ID( expr_list )
+   * which is a shorthand for self.ID( expr_list ).
    */
-| OBJECTID '(' ')'
-  {
-    $$ = dispatch(
-      /*  object identifier as expression */
-      object(idtable.add_string("self")),
-      $1,
-      nil_Expressions()
-    );
-  }
 | OBJECTID '(' expr_list ')'
-  {
-    $$ = dispatch(
-      object(idtable.add_string("self")),
-      $1,
-      $3
-    );
-  }
+  { $$ = dispatch(object(idtable.add_string("self")), $1, $3); }
   /*
    * expr ::= if expr then expr else expr fi
    */
