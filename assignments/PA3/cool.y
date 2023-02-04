@@ -172,13 +172,31 @@ class_list:
 
 class:
   /* Syntax:
-   * class TYPE [inherits TYPE] { feature_list };
+   * class TYPE [inherits TYPE] { [feature_list] };
    */
-  CLASS TYPEID '{' feature_list '}' ';'
+  CLASS TYPEID '{' '}' ';'
   {
     $$ = class_(
       $2,
       /* The class implicitly inherits from the Object class. */
+      idtable.add_string("Object"),
+      nil_Features(),
+      stringtable.add_string(curr_filename)
+    );
+  }
+| CLASS TYPEID INHERITS TYPEID '{' '}' ';'
+  {
+    $$ = class_(
+      $2,
+      $4,
+      nil_Features(),
+      stringtable.add_string(curr_filename)
+    );
+  }
+| CLASS TYPEID '{' feature_list '}' ';'
+  {
+    $$ = class_(
+      $2,
       idtable.add_string("Object"),
       $4,
       stringtable.add_string(curr_filename)
@@ -191,11 +209,9 @@ class:
 /* Feature list may be empty, but no empty features in list. */
 feature_list:
   /* Syntax:
-   * feature_list ::= [[feature]]*
+   * feature_list ::= [[feature]]+
    */
-  /* empty */
-  { $$ = nil_Features(); }
-| feature
+feature
   { $$ = single_Features($1); }
 | feature_list feature
   { $$ = append_Features($1, single_Features($2)); }
