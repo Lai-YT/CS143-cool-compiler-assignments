@@ -140,6 +140,7 @@
 %type <case_> case
 
 /* Precedence declarations go here. */
+%right EXTEND_EXPR
 %right ASSIGN
 %right NOT /* %precedence suffices but POSIX Yacc does not support */
 %nonassoc LE '<' '=' /* comparison operators are not allowed to chain */
@@ -302,17 +303,16 @@ expr:
    *  (2) As an implementation detail, multiple IDs are not supported by a
    *      single let constructor in our AST, so we'll have to decompose the
    *      comma-separated ID list into multiple let constructs.
-   *
-   * TODO: The Cool let construct introduces an ambiguity into the language.
-   *  The manual resolves the ambiguity by saying that a let expression extends
-   *  as far to the right as possible.
+   *  (3) The Cool let construct introduces an ambiguity into the language.
+   *      Resolve it by saying that a let expression extends as far to the
+   *      right as possible.
    */
    /*
     * Syntax (a).
     */
-  LET OBJECTID ':' TYPEID IN expr
+  LET OBJECTID ':' TYPEID IN expr %prec EXTEND_EXPR
   { $$ = let($2, $4, no_expr(), $6); }
-| LET OBJECTID ':' TYPEID ASSIGN expr IN expr
+| LET OBJECTID ':' TYPEID ASSIGN expr IN expr %prec EXTEND_EXPR
   { $$ = let($2, $4, $6, $8); }
    /*
     * Syntax (b).
@@ -341,9 +341,9 @@ trailing_let:
    *
    * As an implementation detail, we treat ',' as LET to decompose them.
    */
-  ',' OBJECTID ':' TYPEID IN expr
+  ',' OBJECTID ':' TYPEID IN expr %prec EXTEND_EXPR
   { $$ = let($2, $4, no_expr(), $6); }
-| ',' OBJECTID ':' TYPEID ASSIGN expr IN expr
+| ',' OBJECTID ':' TYPEID ASSIGN expr IN expr %prec EXTEND_EXPR
   { $$ = let($2, $4, $6, $8); }
 | ',' OBJECTID ':' TYPEID trailing_let
   { $$ = let($2, $4, no_expr(), $5); }
