@@ -142,7 +142,7 @@
 /* Precedence declarations go here. */
 %right ASSIGN
 %right NOT /* %precedence suffices but POSIX Yacc does not support */
-%left LE '<' '=' /* %precedence suffices but POSIX Yacc does not support */
+%nonassoc LE '<' '=' /* comparison operators are not allowed to chain */
 %left '+' '-'
 %left '*' '/'
 %left ISVOID
@@ -310,7 +310,7 @@ expr:
    /*
     * Syntax (a).
     */
-LET OBJECTID ':' TYPEID IN expr
+  LET OBJECTID ':' TYPEID IN expr
   { $$ = let($2, $4, no_expr(), $6); }
 | LET OBJECTID ':' TYPEID ASSIGN expr IN expr
   { $$ = let($2, $4, $6, $8); }
