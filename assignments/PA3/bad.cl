@@ -48,8 +48,20 @@ class H {
    };
 };
 
+(* error:  missing type in let binding + invalid expression *)
+class I {
+   method1() : Int {
+      let i, j : Int <- 1 in j?
+   };
+
+   -- missing type in the second binding
+   method2() : Int {
+      let i : Int <- 1, j in i?
+   };
+};
+
 (* error:  keyword inherits is misspelled
  * This error is a duplicate to check that the parser isn't terminated early.
  *)
-Class I inherts A {
+Class J inherts A {
 };
