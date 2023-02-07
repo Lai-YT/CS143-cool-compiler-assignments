@@ -214,6 +214,8 @@ class:
   }
 | CLASS TYPEID INHERITS TYPEID '{' feature_list '}' ';'
   { $$ = class_($2, $4, $6, stringtable.add_string(curr_filename)); }
+| error ';'
+  { yyerrok; /* restart at the next class definition */ }
 ;
 
 /* Feature list may be empty, but no empty features in list. */
@@ -240,6 +242,26 @@ feature:
   { $$ = attr($1, $3, no_expr()); }
 | OBJECTID ':' TYPEID ASSIGN expr ';'
   { $$ = attr($1, $3, $5); }
+| error ';'
+  { ; /* going on to the next feature */
+    /*
+     * Not resuming immediately with "yyerrok" because of the behavior of the
+     * reference Cool parser. Here's the specific example,
+     *  class A { (* ERROR: missing enclosing bracket *)
+     *  ;
+     *  class B { (* OK *)
+     *  };
+     * The first ';' causes a syntax error during the parsing of the feature (not class!).
+     * If resumes immediately, the second "class" causes another error, since
+     * we're still in the body of the first class, and nesting class isn't allowed.
+     * The reference parser does not report such an error, which means we can't
+     * resume immediately.
+     * Though the correct guess is to mark "class A" as an error class and to
+     * discard up to the first ';', our grammar doesn't support such an intelligent
+     * guess. So let Bison suppress it, only after three consecutive input tokens
+     * have been successfully shifted will error messages resume".
+     */
+  }
 ;
 
 formal_list:
@@ -282,6 +304,8 @@ semi_colon_separated_expr_list:
   { $$ = single_Expressions($1); }
 | semi_colon_separated_expr_list expr ';'
   { $$ = append_Expressions($1, single_Expressions($2)); }
+| error ';'
+  { yyerrok; /* going on to the next expression */ }
 ;
 
 /*
@@ -330,6 +354,8 @@ comma_separated_let_list:
   { $$ = let($2, $4, no_expr(), $5); }
 | LET OBJECTID ':' TYPEID ASSIGN expr trailing_let
   { $$ = let($2, $4, $6, $7); }
+| LET error trailing_let
+  { yyerrok; }
 ;
 
 trailing_let:
@@ -346,6 +372,13 @@ trailing_let:
   { $$ = let($2, $4, no_expr(), $5); }
 | ',' OBJECTID ':' TYPEID ASSIGN expr trailing_let
   { $$ = let($2, $4, $6, $7); }
+| error trailing_let
+  { yyerrok; /* going on to the next variable */ }
+| error IN expr
+  { ;
+    /* I think it's OK to resume here because the error is bounded in the let
+      binding, but I'll follow the reported message of the reference parser. */
+  }
 ;
 
 expr:
