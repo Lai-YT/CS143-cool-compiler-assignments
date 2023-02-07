@@ -297,13 +297,10 @@ expr:
    *       |  let ID : TYPE [ <- expr ] [[ , ID : TYPE [ <- expr ] ]]+ in expr  --- (b)
    *
    * NOTE:
-   *  (1) The reference Cool compiler doesn't support such comma-separated
-   *      multiple IDs. It support only the above syntax (a), but we'll support
-   *      (b) since the manual says so.
-   *  (2) As an implementation detail, multiple IDs are not supported by a
+   *  (1) As an implementation detail, multiple IDs are not supported by a
    *      single let constructor in our AST, so we'll have to decompose the
    *      comma-separated ID list into multiple let constructs.
-   *  (3) The Cool let construct introduces an ambiguity into the language.
+   *  (2) The Cool let construct introduces an ambiguity into the language.
    *      Resolve it by saying that a let expression extends as far to the
    *      right as possible.
    */

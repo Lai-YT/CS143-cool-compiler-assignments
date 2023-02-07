@@ -139,7 +139,6 @@ class B inherits A {
       let x : Int <- 1 in x
    };
 
-   -- not supported by the reference Cool compiler
    commaSeparatedLets() : Int {
       let x : Int, y : String in 0
    };
