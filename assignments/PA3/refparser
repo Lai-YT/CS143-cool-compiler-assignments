@@ -1,2 +1,2 @@
 #!/bin/sh -f
-./lexer "$*" | ../../bin/parser "$*"
+./lexer "$@" | ../../bin/parser "$@"
