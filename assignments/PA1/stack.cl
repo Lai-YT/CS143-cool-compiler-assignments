@@ -80,12 +80,12 @@ class PlusCommand inherits StackCommand {
 
    evaluate() : Int { {
       stack.pop(); -- pop the plus command
-      (let augend : StackCommand <- stack.pop() in
-      (let addend : StackCommand <- stack.pop() in
-      (let val : Int <- augend.evaluate() + addend.evaluate() in {
+      (let augend : StackCommand <- stack.pop(),
+            addend : StackCommand <- stack.pop(),
+            val : Int <- augend.evaluate() + addend.evaluate() in {
          stack.push((new IntCommand).init(val));
          0;
-      })));
+      });
    } };
 
    display() : Object {
@@ -98,11 +98,11 @@ class PlusCommand inherits StackCommand {
 class SwapCommand inherits StackCommand {
    evaluate() : Int { {
       stack.pop(); -- pop the swap command
-      (let top : StackCommand <- stack.pop() in
-      (let next : StackCommand <- stack.pop() in {
+      (let top : StackCommand <- stack.pop(),
+            next : StackCommand <- stack.pop() in {
          stack.push(top).push(next);
          0;
-      }));
+      });
    } };
 
    display() : Object {
