@@ -133,8 +133,7 @@
 %type <formals> formal_list
 %type <formal> formal
 %type <expressions> expr_list semi_colon_separated_expr_list
-/* not a typo, it's indeed a single expression */
-%type <expression> trailing_let comma_separated_let_list
+%type <expression> trailing_let /* not a typo, it's indeed a single expression */
 %type <expression> expr
 %type <cases> case_list
 %type <case_> case
@@ -309,53 +308,36 @@ semi_colon_separated_expr_list:
 ;
 
 /*
- * Let
+ * Let.
  *
  * The let construct with the following syntax has multiple forms thus sophisticated.
  *    expr ::= let ID : TYPE [ <- expr ] [[ , ID : TYPE [ <- expr ] ]]* in expr
  * So pull it out as an individual section.
+ * Also he Cool let construct introduces an ambiguity into the language.
+ * Resolve it by saying that a let expression extends as far to the right as possible.
  */
 expr:
   /* Syntax:
-   * expr ::= let ID : TYPE [ <- expr ] in expr  --- (a)
-   *       |  let ID : TYPE [ <- expr ] [[ , ID : TYPE [ <- expr ] ]]+ in expr  --- (b)
-   *
-   * NOTE:
-   *  (1) As an implementation detail, multiple IDs are not supported by a
-   *      single let constructor in our AST, so we'll have to decompose the
-   *      comma-separated ID list into multiple let constructs.
-   *  (2) The Cool let construct introduces an ambiguity into the language.
-   *      Resolve it by saying that a let expression extends as far to the
-   *      right as possible.
+   * expr ::= let ID : TYPE [ <- expr ] in expr
    */
-   /*
-    * Syntax (a).
-    */
   LET OBJECTID ':' TYPEID IN expr %prec EXTEND_EXPR
   { $$ = let($2, $4, no_expr(), $6); }
 | LET OBJECTID ':' TYPEID ASSIGN expr IN expr %prec EXTEND_EXPR
   { $$ = let($2, $4, $6, $8); }
-   /*
-    * Syntax (b).
-    * Equivalent to expr ::= comma_separated_let_list
-    */
-| comma_separated_let_list
-  { $$ = $1; }
-;
-
-comma_separated_let_list:
-  /* Syntax:
-   * leading_let ::= let ID : TYPE [ <- expr ] trailing_let
+  /*
+   * expr ::= let ID : TYPE [ <- expr ] trailing_let
+   * Equivalent to let ID : TYPE [ <- expr ] [[ , ID : TYPE [ <- expr ] ]]+ in expr
    *
-   * As an implementation detail, we treat as if there's an IN before the
-   * trailing_let.
+   * NOTE: Multiple IDs are not supported by a single let constructor in our
+   *   AST, so we'll have to decompose the comma-separated ID list into multiple
+   *   let constructs. We treat as if there's an IN before the trailing_let.
    */
-  LET OBJECTID ':' TYPEID trailing_let
+| LET OBJECTID ':' TYPEID trailing_let
   { $$ = let($2, $4, no_expr(), $5); }
 | LET OBJECTID ':' TYPEID ASSIGN expr trailing_let
   { $$ = let($2, $4, $6, $7); }
 | LET error trailing_let
-  { yyerrok; }
+  { yyerrok; /* going on to the next variable */ }
 ;
 
 trailing_let:
@@ -374,7 +356,7 @@ trailing_let:
   { $$ = let($2, $4, $6, $7); }
 | error trailing_let
   { yyerrok; /* going on to the next variable */ }
-| error IN expr
+| error IN expr %prec EXTEND_EXPR
   { ;
     /* I think it's OK to resume here because the error is bounded in the let
       binding, but I'll follow the reported message of the reference parser. */
