@@ -14,4 +14,4 @@ Each assignment will ultimately result in a working compiler phase which can int
 | [PA4](handouts/PA4.pdf) |        | to do |
 | [PA5](handouts/PA5.pdf) |        | to do |
 
-*Some of the tests failed. But this is likely because the reference parser doesn't generate correct line numbers on attributes.
+*Some of the tests failed on matching line numbers. This is likely because the reference parser doesn't generate correct line numbers on attributes.
