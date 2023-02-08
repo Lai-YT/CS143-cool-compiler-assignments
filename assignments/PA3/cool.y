@@ -128,7 +128,7 @@
 %type <program> program
 %type <classes> class_list
 %type <class_> class
-%type <features> feature_list opt_feature_list
+%type <features> feature_list
 %type <feature> feature
 %type <formals> formal_list
 %type <formal> formal
@@ -181,9 +181,9 @@ class_list:
 
 class:
   /* Syntax:
-   * class TYPE [inherits TYPE] { opt_feature_list };
+   * class TYPE [inherits TYPE] { feature_list };
    */
-CLASS TYPEID '{' opt_feature_list '}' ';'
+CLASS TYPEID '{' feature_list '}' ';'
   {
     $$ = class_(
       $2,
@@ -193,31 +193,24 @@ CLASS TYPEID '{' opt_feature_list '}' ';'
       stringtable.add_string(curr_filename)
     );
   }
-| CLASS TYPEID INHERITS TYPEID '{' opt_feature_list '}' ';'
+| CLASS TYPEID INHERITS TYPEID '{' feature_list '}' ';'
   { $$ = class_($2, $4, $6, stringtable.add_string(curr_filename)); }
 | error ';'
   { yyerrok; /* restart at the next class definition */ }
 ;
 
-/* Feature list may be empty, but no empty features in list.
- * We need this extra non-terminal to resolve the ambiguity.
- */
-opt_feature_list:
-  /* Syntax:
-   * opt_feature_list ::= [feature_list]
-   */
-  /* empty */
-  { $$ = nil_Features(); }
-| feature_list
-  { $$ = $1; }
-;
-
+/* Feature list may be empty, but no empty features in list. */
 feature_list:
   /* Syntax:
    * feature_list ::= [[feature]]+
+   *
+   * NOTE: The left most feature will always be an empty feature. This is
+   *  syntactically OK. One may also introduce a new non-terminal called
+   *  opt_feature_list but it is more verbose (directly adding the grammar
+   *  "feature_list ::= feature" introduces ambiguity).
    */
-  feature
-  { $$ = single_Features($1); }
+  /* empty */
+  { $$ = nil_Features(); }
 | feature_list feature
   { $$ = append_Features($1, single_Features($2)); }
 ;
