@@ -128,7 +128,7 @@
 %type <program> program
 %type <classes> class_list
 %type <class_> class
-%type <features> feature_list
+%type <features> feature_list opt_feature_list
 %type <feature> feature
 %type <formals> formal_list
 %type <formal> formal
@@ -181,48 +181,42 @@ class_list:
 
 class:
   /* Syntax:
-   * class TYPE [inherits TYPE] { [feature_list] };
+   * class TYPE [inherits TYPE] { opt_feature_list };
    */
-  CLASS TYPEID '{' '}' ';'
+CLASS TYPEID '{' opt_feature_list '}' ';'
   {
     $$ = class_(
       $2,
       /* The class implicitly inherits from the Object class. */
       idtable.add_string("Object"),
-      nil_Features(),
-      stringtable.add_string(curr_filename)
-    );
-  }
-| CLASS TYPEID INHERITS TYPEID '{' '}' ';'
-  {
-    $$ = class_(
-      $2,
-      $4,
-      nil_Features(),
-      stringtable.add_string(curr_filename)
-    );
-  }
-| CLASS TYPEID '{' feature_list '}' ';'
-  {
-    $$ = class_(
-      $2,
-      idtable.add_string("Object"),
       $4,
       stringtable.add_string(curr_filename)
     );
   }
-| CLASS TYPEID INHERITS TYPEID '{' feature_list '}' ';'
+| CLASS TYPEID INHERITS TYPEID '{' opt_feature_list '}' ';'
   { $$ = class_($2, $4, $6, stringtable.add_string(curr_filename)); }
 | error ';'
   { yyerrok; /* restart at the next class definition */ }
 ;
 
-/* Feature list may be empty, but no empty features in list. */
+/* Feature list may be empty, but no empty features in list.
+ * We need this extra non-terminal to resolve the ambiguity.
+ */
+opt_feature_list:
+  /* Syntax:
+   * opt_feature_list ::= [feature_list]
+   */
+  /* empty */
+  { $$ = nil_Features(); }
+| feature_list
+  { $$ = $1; }
+;
+
 feature_list:
   /* Syntax:
    * feature_list ::= [[feature]]+
    */
-feature
+  feature
   { $$ = single_Features($1); }
 | feature_list feature
   { $$ = append_Features($1, single_Features($2)); }
