@@ -162,6 +162,10 @@ public:
    Class_ copy_Class_();
    void dump(ostream& stream, int n);
 
+   /* need these info to build the class table */
+   Symbol get_parent() const { return parent; }
+   Symbol get_name() const { return name; }
+
 #ifdef Class__SHARED_EXTRAS
    Class__SHARED_EXTRAS
 #endif
