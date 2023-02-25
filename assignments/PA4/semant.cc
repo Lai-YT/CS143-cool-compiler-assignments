@@ -260,7 +260,7 @@ int equal_symbol(Symbol a, Symbol b)
     return a->equal_string(b->get_string(), b->get_len());
 }
 
-int SymbolGraph::find_vertex_pos(Symbol vertex) const
+int InheritanceGraph::find_vertex_pos(Symbol vertex) const
 {
     int pos = 0;
     for (List<Symbol> *l = vertices; l && l->hd(); l = l->tl(), pos++)
@@ -273,7 +273,7 @@ int SymbolGraph::find_vertex_pos(Symbol vertex) const
     return pos;
 }
 
-List<Symbol> *SymbolGraph::find_edges(int src_pos) const
+List<Symbol> *InheritanceGraph::find_edges(int src_pos) const
 {
     assert(src_pos < num_of_vertices);
     List<List<Symbol> *> *l = adjacency_lists;
@@ -285,7 +285,7 @@ List<Symbol> *SymbolGraph::find_edges(int src_pos) const
 }
 
 
-void SymbolGraph::add_edge(Symbol src, Symbol dest)
+void InheritanceGraph::add_edge(Symbol src, Symbol dest)
 {
     if (!has_vertex(src))
     {
@@ -302,7 +302,7 @@ void SymbolGraph::add_edge(Symbol src, Symbol dest)
             new List<Symbol>(new Symbol(dest), adjacency_list_of_src);
 }
 
-int SymbolGraph::has_edge(Symbol src, Symbol dest) const
+int InheritanceGraph::has_edge(Symbol src, Symbol dest) const
 {
     if (!has_vertex(src) || !has_vertex(dest))
     {
@@ -322,7 +322,7 @@ int SymbolGraph::has_edge(Symbol src, Symbol dest) const
     return FALSE;
 }
 
-void SymbolGraph::add_vertex(Symbol vertex)
+void InheritanceGraph::add_vertex(Symbol vertex)
 {
     vertices = new List<Symbol>(new Symbol(vertex), vertices);
     num_of_vertices++;
@@ -334,7 +334,7 @@ void SymbolGraph::add_vertex(Symbol vertex)
         adjacency_lists);
 }
 
-int SymbolGraph::has_vertex(Symbol vertex) const
+int InheritanceGraph::has_vertex(Symbol vertex) const
 {
     for (List<Symbol> *l = vertices; l && l->hd(); l = l->tl())
     {

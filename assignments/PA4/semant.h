@@ -17,8 +17,8 @@ typedef ClassTable *ClassTableP;
 // Returns whether the string representation of the symbols are equal.
 int equal_symbol(Symbol a, Symbol b);
 
-// A graph build with adjacency list, which is used as the inheritance graph.
-class SymbolGraph {
+// Build with adjacency list.
+class InheritanceGraph {
 private:
   // Though vertices and and adjacency_lists are linked lists, they are mapped
   // through relative positions (index).
@@ -53,7 +53,7 @@ private:
   int semant_errors;
   void install_basic_classes();
   ostream& error_stream;
-  SymbolGraph graph;
+  InheritanceGraph graph;
 
 public:
   ClassTable(Classes);
