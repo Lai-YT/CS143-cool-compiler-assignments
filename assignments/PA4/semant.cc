@@ -153,6 +153,7 @@ void ClassTable::install_basic_classes() {
 					       single_Features(method(type_name, nil_Formals(), Str, no_expr()))),
 			       single_Features(method(copy, nil_Formals(), SELF_TYPE, no_expr()))),
 	       filename);
+    add_class(No_class);
     add_class(Object, No_class);
 
     //
@@ -296,10 +297,6 @@ void InheritanceGraph::add_edge(Symbol src, Symbol dest)
     {
         add_vertex(src);
     }
-    if (!has_vertex(dest))
-    {
-        add_vertex(dest);
-    }
     List<Symbol> **adjacency_list_of_src = find_edges(src);
     *adjacency_list_of_src =
             new List<Symbol>(new Symbol(dest), *adjacency_list_of_src);
@@ -307,7 +304,7 @@ void InheritanceGraph::add_edge(Symbol src, Symbol dest)
 
 int InheritanceGraph::has_edge(Symbol src, Symbol dest) const
 {
-    if (!has_vertex(src) || !has_vertex(dest))
+    if (!has_vertex(src))
     {
         return FALSE;
     }

@@ -33,7 +33,7 @@ private:
 
 public:
   // Adds a new edge from src to dest.
-  // If any of the vertex isn't already in the graph, it is added to the graph.
+  // If src isn't already in the graph, it is added to the graph.
   // The caller is responsible for duplicating.
   void add_edge(Symbol src, Symbol dest);
   int has_edge(Symbol src, Symbol dest) const;
@@ -58,6 +58,7 @@ private:
 
 public:
   ClassTable(Classes);
+  void add_class(Symbol name);
   void add_class(Symbol name, Symbol parent);
   int has_class(Symbol name) const;
   int errors() { return semant_errors; }
