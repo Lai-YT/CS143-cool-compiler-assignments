@@ -284,6 +284,11 @@ List<Symbol> *InheritanceGraph::find_edges(int src_pos) const
     return *l->hd();
 }
 
+List<Symbol> *InheritanceGraph::find_edges(Symbol vertex) const
+{
+    int pos = find_vertex_pos(vertex);
+    return find_edges(pos);
+}
 
 void InheritanceGraph::add_edge(Symbol src, Symbol dest)
 {
@@ -296,8 +301,7 @@ void InheritanceGraph::add_edge(Symbol src, Symbol dest)
         add_vertex(dest);
     }
 
-    int src_pos = find_vertex_pos(src);
-    List<Symbol> *adjacency_list_of_src = find_edges(src_pos);
+    List<Symbol> *adjacency_list_of_src = find_edges(src);
     adjacency_list_of_src =
             new List<Symbol>(new Symbol(dest), adjacency_list_of_src);
 }
@@ -309,8 +313,7 @@ int InheritanceGraph::has_edge(Symbol src, Symbol dest) const
         return FALSE;
     }
 
-    int src_pos = find_vertex_pos(src);
-    for (List<Symbol> *edges = find_edges(src_pos);
+    for (List<Symbol> *edges = find_edges(src);
             edges /* NULL if not having any edges */ && edges->hd();
             edges = edges->tl())
     {
