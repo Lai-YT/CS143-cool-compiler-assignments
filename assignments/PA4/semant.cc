@@ -89,7 +89,8 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0) , error_stream(cerr)
     install_basic_classes();
     for (int i = classes->first(); classes->more(i); i = classes->next(i))
     {
-        add_class(dynamic_cast<class__class *>(classes->nth(i))->get_name());
+        class__class *curr_class = dynamic_cast<class__class *>(classes->nth(i));
+        add_class(curr_class->get_name(), curr_class->get_parent());
     }
 
     /* second pass: check no inheriting on undeclared class */
@@ -106,21 +107,17 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0) , error_stream(cerr)
     }
 }
 
-void ClassTable::add_class(Symbol name)
+void ClassTable::add_class(Symbol name, Symbol parent)
 {
-    tbl = new List<Symbol>(new Symbol(name), tbl);
+    if (!graph.has_edge(name, parent))
+    {
+        graph.add_edge(name, parent);
+    }
 }
 
-int ClassTable::has_class(Symbol name)
+int ClassTable::has_class(Symbol name) const
 {
-    for (List<Symbol> *l = tbl; l && l->hd(); l = l->tl())
-    {
-        if ((*l->hd())->equal_string(name->get_string(), name->get_len()))
-        {
-            return TRUE;
-        }
-    }
-    return FALSE;
+    return graph.has_vertex(name);
 }
 
 void ClassTable::install_basic_classes() {
@@ -156,7 +153,7 @@ void ClassTable::install_basic_classes() {
 					       single_Features(method(type_name, nil_Formals(), Str, no_expr()))),
 			       single_Features(method(copy, nil_Formals(), SELF_TYPE, no_expr()))),
 	       filename);
-    add_class(dynamic_cast<class__class *>(Object_class)->get_name());
+    add_class(Object, No_class);
 
     //
     // The IO class inherits from Object. Its methods are
@@ -178,7 +175,7 @@ void ClassTable::install_basic_classes() {
 					       single_Features(method(in_string, nil_Formals(), Str, no_expr()))),
 			       single_Features(method(in_int, nil_Formals(), Int, no_expr()))),
 	       filename);
-    add_class(dynamic_cast<class__class *>(IO_class)->get_name());
+    add_class(IO, Object);
 
     //
     // The Int class has no methods and only a single attribute, the
@@ -258,7 +255,96 @@ ostream& ClassTable::semant_error()
     return error_stream;
 }
 
+int equal_symbol(Symbol a, Symbol b)
+{
+    return a->equal_string(b->get_string(), b->get_len());
+}
 
+int SymbolGraph::find_vertex_pos(Symbol vertex) const
+{
+    int pos = 0;
+    for (List<Symbol> *l = vertices; l && l->hd(); l = l->tl(), pos++)
+    {
+        if (equal_symbol(*l->hd(), vertex))
+        {
+            break;
+        }
+    }
+    return pos;
+}
+
+List<Symbol> *SymbolGraph::find_edges(int src_pos) const
+{
+    assert(src_pos < num_of_vertices);
+    List<List<Symbol> *> *l = adjacency_lists;
+    for (int pos = 0; pos < src_pos; l = l->tl(), pos++)
+    {
+        ;
+    }
+    return *l->hd();
+}
+
+
+void SymbolGraph::add_edge(Symbol src, Symbol dest)
+{
+    if (!has_vertex(src))
+    {
+        add_vertex(src);
+    }
+    if (!has_vertex(dest))
+    {
+        add_vertex(dest);
+    }
+
+    int src_pos = find_vertex_pos(src);
+    List<Symbol> *adjacency_list_of_src = find_edges(src_pos);
+    adjacency_list_of_src =
+            new List<Symbol>(new Symbol(dest), adjacency_list_of_src);
+}
+
+int SymbolGraph::has_edge(Symbol src, Symbol dest) const
+{
+    if (!has_vertex(src) || !has_vertex(dest))
+    {
+        return FALSE;
+    }
+
+    int src_pos = find_vertex_pos(src);
+    for (List<Symbol> *edges = find_edges(src_pos);
+            edges /* NULL if not having any edges */ && edges->hd();
+            edges = edges->tl())
+    {
+        if (equal_symbol(*edges->hd(), dest))
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+void SymbolGraph::add_vertex(Symbol vertex)
+{
+    vertices = new List<Symbol>(new Symbol(vertex), vertices);
+    num_of_vertices++;
+
+    List<Symbol> *empty_adjacency_list = new List<Symbol>(NULL);
+    adjacency_lists = new List<List<Symbol> *>(
+        new List<Symbol> *(
+            empty_adjacency_list),  // takes yet one more layer of pointer
+        adjacency_lists);
+}
+
+int SymbolGraph::has_vertex(Symbol vertex) const
+{
+    for (List<Symbol> *l = vertices; l && l->hd(); l = l->tl())
+    {
+        if (equal_symbol(*l->hd(), vertex))
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
 
 /*   This is the entry point to the semantic checker.
 
