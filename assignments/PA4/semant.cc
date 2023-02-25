@@ -273,7 +273,7 @@ int InheritanceGraph::find_vertex_pos(Symbol vertex) const
     return pos;
 }
 
-List<Symbol> *InheritanceGraph::find_edges(int src_pos) const
+List<Symbol> **InheritanceGraph::find_edges(int src_pos) const
 {
     assert(src_pos < num_of_vertices);
     List<List<Symbol> *> *l = adjacency_lists;
@@ -281,10 +281,10 @@ List<Symbol> *InheritanceGraph::find_edges(int src_pos) const
     {
         ;
     }
-    return *l->hd();
+    return l->hd();
 }
 
-List<Symbol> *InheritanceGraph::find_edges(Symbol vertex) const
+List<Symbol> **InheritanceGraph::find_edges(Symbol vertex) const
 {
     int pos = find_vertex_pos(vertex);
     return find_edges(pos);
@@ -300,10 +300,9 @@ void InheritanceGraph::add_edge(Symbol src, Symbol dest)
     {
         add_vertex(dest);
     }
-
-    List<Symbol> *adjacency_list_of_src = find_edges(src);
-    adjacency_list_of_src =
-            new List<Symbol>(new Symbol(dest), adjacency_list_of_src);
+    List<Symbol> **adjacency_list_of_src = find_edges(src);
+    *adjacency_list_of_src =
+            new List<Symbol>(new Symbol(dest), *adjacency_list_of_src);
 }
 
 int InheritanceGraph::has_edge(Symbol src, Symbol dest) const
@@ -313,7 +312,7 @@ int InheritanceGraph::has_edge(Symbol src, Symbol dest) const
         return FALSE;
     }
 
-    for (List<Symbol> *edges = find_edges(src);
+    for (List<Symbol> *edges = *find_edges(src);
             edges /* NULL if not having any edges */ && edges->hd();
             edges = edges->tl())
     {

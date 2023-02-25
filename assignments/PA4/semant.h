@@ -28,8 +28,8 @@ private:
 
   // Equals to "num_of_vertices" if the vertex doesn't exist.
   int find_vertex_pos(Symbol vertex) const;
-  List<Symbol> *find_edges(int src_pos) const;
-  List<Symbol> *find_edges(Symbol vertex) const;
+  List<Symbol> **find_edges(int src_pos) const;
+  List<Symbol> **find_edges(Symbol vertex) const;
 
 public:
   // Adds a new edge from src to dest.
