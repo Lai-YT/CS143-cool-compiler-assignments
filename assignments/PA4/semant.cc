@@ -105,6 +105,19 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0) , error_stream(cerr)
                                      << curr_class->get_parent() << ".\n";
         }
     }
+    if (semant_errors)
+    {
+        return;
+    }
+    check_circular_inheritance();
+}
+
+void ClassTable::add_class(Symbol name)
+{
+    if (!graph.has_vertex(name))
+    {
+        graph.add_vertex(name);
+    }
 }
 
 void ClassTable::add_class(Symbol name, Symbol parent)
@@ -112,6 +125,7 @@ void ClassTable::add_class(Symbol name, Symbol parent)
     if (!graph.has_edge(name, parent))
     {
         graph.add_edge(name, parent);
+        assert(graph.has_edge(name, parent));
     }
 }
 
@@ -259,6 +273,75 @@ ostream& ClassTable::semant_error()
 int equal_symbol(Symbol a, Symbol b)
 {
     return a->equal_string(b->get_string(), b->get_len());
+}
+
+void ClassTable::check_circular_inheritance()
+{
+    List<Symbol> *visited = new List<Symbol>(NULL);
+    List<Symbol> *visiting = new List<Symbol>(NULL);
+    for (List<Symbol> *l = graph.vertices; l && l->hd(); l = l->tl())
+    {
+        Symbol vertex = *l->hd();
+        int is_visited = FALSE;
+        for (List<Symbol> *m = visited; m && m->hd(); m = m->tl())
+        {
+            if (equal_symbol(*m->hd(), vertex))
+            {
+                is_visited = TRUE;
+            }
+        }
+        if (is_visited)
+        {
+            continue;
+        }
+        visiting = new List<Symbol>(new Symbol(vertex), visiting);
+        check_circular_inheritance(vertex, &visited, &visiting);
+        visiting = visiting->tl();
+        visited = new List<Symbol>(new Symbol(vertex), visited);
+    }
+}
+
+void ClassTable::check_circular_inheritance(Symbol to_visit, List<Symbol> **visited, List<Symbol> **visiting)
+{
+    for (List<Symbol> *l = *graph.find_edges(to_visit); l && l->hd(); l = l->tl())
+    {
+        Symbol parent = *l->hd();
+        int is_visiting = FALSE;
+        for (List<Symbol> *m = *visiting; m && m->hd(); m = m->tl())
+        {
+            if (equal_symbol(*m->hd(), parent))
+            {
+                is_visiting = TRUE;
+            }
+        }
+        if (is_visiting)
+        {
+            semant_error() << "Class " << to_visit << ", or an ancestor of " << to_visit << ", is involved in an inheritance cycle." << '\n';
+            semant_error() << "Class " << parent << ", or an ancestor of " << parent << ", is involved in an inheritance cycle." << '\n';
+            continue;
+        }
+
+        int is_visited = FALSE;
+        for (List<Symbol> *m = *visited; m && m->hd(); m = m->tl())
+        {
+            if (equal_symbol(*m->hd(), parent))
+            {
+                is_visited = TRUE;
+            }
+        }
+
+        if (is_visited)
+        {
+            continue;
+        }
+        else
+        {
+            *visiting = new List<Symbol>(new Symbol(parent), *visiting);
+            check_circular_inheritance(parent, visited, visiting);
+            *visiting = (*visiting)->tl();
+            *visited = new List<Symbol>(new Symbol(parent), *visited);
+        }
+    }
 }
 
 int InheritanceGraph::find_vertex_pos(Symbol vertex) const

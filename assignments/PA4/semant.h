@@ -20,6 +20,7 @@ int equal_symbol(Symbol a, Symbol b);
 // Build with adjacency list.
 class InheritanceGraph {
 private:
+  friend class ClassTable;
   // Though vertices and and adjacency_lists are linked lists, they are mapped
   // through relative positions (index).
   List<Symbol> *vertices = NULL;
@@ -55,6 +56,8 @@ private:
   void install_basic_classes();
   ostream& error_stream;
   InheritanceGraph graph;
+  void check_circular_inheritance();
+  void check_circular_inheritance(Symbol to_visit, List<Symbol> **visited, List<Symbol> **visiting);
 
 public:
   ClassTable(Classes);
