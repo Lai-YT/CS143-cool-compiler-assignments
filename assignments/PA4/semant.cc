@@ -81,20 +81,17 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
     /* first pass: get name of the declared classes */
     install_basic_classes();
     for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
-        class__class *curr_class =
-            dynamic_cast<class__class *>(classes->nth(i));
-        add_class(curr_class->get_name(), curr_class->get_parent());
+        Class_ curr_class = classes->nth(i);
+        add_class(curr_class->GetName(), curr_class->GetParentName());
     }
 
     /* second pass: check no inheriting on undeclared class */
     for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
-        class__class *curr_class =
-            dynamic_cast<class__class *>(classes->nth(i));
-        assert(curr_class);
-        if (!has_class(curr_class->get_parent())) {
-            semant_error(curr_class) << "Class " << curr_class->get_name()
+        Class_ curr_class = classes->nth(i);
+        if (!has_class(curr_class->GetParentName())) {
+            semant_error(curr_class) << "Class " << curr_class->GetName()
                                      << " inherits from an undefined class "
-                                     << curr_class->get_parent() << ".\n";
+                                     << curr_class->GetParentName() << ".\n";
         }
     }
     if (semant_errors) {
@@ -152,8 +149,8 @@ void ClassTable::install_basic_classes() {
 					       single_Features(method(type_name, nil_Formals(), Str, no_expr()))),
 			       single_Features(method(copy, nil_Formals(), SELF_TYPE, no_expr()))),
 	       filename);
-    add_class(No_class);
-    add_class(Object, No_class);
+    add_class(Object_class->GetParentName());
+    add_class(Object_class->GetName(), Object_class->GetParentName());
 
     //
     // The IO class inherits from Object. Its methods are
@@ -175,7 +172,7 @@ void ClassTable::install_basic_classes() {
 					       single_Features(method(in_string, nil_Formals(), Str, no_expr()))),
 			       single_Features(method(in_int, nil_Formals(), Int, no_expr()))),
 	       filename);
-    add_class(IO, Object);
+    add_class(IO_class->GetName(), IO_class->GetParentName());
 
     //
     // The Int class has no methods and only a single attribute, the
