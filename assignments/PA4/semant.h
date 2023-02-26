@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <iostream>
 #include <unordered_map>
+#include <unordered_set>
 #include "cool-tree.h"
 #include "stringtab.h"
 #include "symtab.h"
@@ -27,11 +28,14 @@ private:
   void install_basic_classes();
   void InstallClasses(Classes);
   ostream& error_stream;
+  std::unordered_set<Symbol> final_classes{};
+  void CheckNoInheritingFromBasic();
   void CheckDeclaration();
   void CheckCircularInheritance();
 
 public:
   ClassTable(Classes);
+  void AddFinalClass(Class_ c);
   void AddClass(Class_ c);
   bool HasClass(Symbol name) const;
   int errors() { return semant_errors; }

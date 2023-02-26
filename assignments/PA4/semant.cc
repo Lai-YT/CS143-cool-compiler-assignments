@@ -84,14 +84,13 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
     InstallClasses(classes);
 
     // second pass(es): check inheritance
+    CheckNoInheritingFromBasic();
     CheckDeclaration();
     if (semant_errors) {
+        // the graph is broken so no further circular check
         return;
     }
     CheckCircularInheritance();
-    if (semant_errors) {
-        return;
-    }
 }
 
 void ClassTable::InstallClasses(Classes classes) {
@@ -102,6 +101,11 @@ void ClassTable::InstallClasses(Classes classes) {
 
 void ClassTable::AddClass(Class_ c) {
     emplace(c->GetName(), c);
+}
+
+void ClassTable::AddFinalClass(Class_ c) {
+    AddClass(c);
+    final_classes.insert(c->GetName());
 }
 
 bool ClassTable::HasClass(Symbol name) const {
@@ -209,9 +213,9 @@ void ClassTable::install_basic_classes() {
 
     AddClass(Object_class);
     AddClass(IO_class);
-    AddClass(Int_class);
-    AddClass(Bool_class);
-    AddClass(Str_class);
+    AddFinalClass(Int_class);
+    AddFinalClass(Bool_class);
+    AddFinalClass(Str_class);
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -241,6 +245,17 @@ ostream &ClassTable::semant_error(Symbol filename, tree_node *t) {
 ostream &ClassTable::semant_error() {
     semant_errors++;
     return error_stream;
+}
+
+
+void ClassTable::CheckNoInheritingFromBasic() {
+    for (auto [name, clss] : *this) {
+        Symbol pname = clss->GetParentName();
+        if (final_classes.find(pname) != final_classes.cend()) {
+            semant_error(clss) << "Class " << name << " cannot inherit class "
+                               << pname << ".\n";
+        }
+    }
 }
 
 void ClassTable::CheckDeclaration() {
