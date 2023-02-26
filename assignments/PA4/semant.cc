@@ -84,7 +84,7 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
     InstallClasses(classes);
 
     // second pass(es): check inheritance
-    CheckNoInheritanceFromBasicClass();
+    CheckNoInheritanceFromFinal();
     CheckNoUndeclaredBaseClass();
     if (semant_errors) {
         // the graph is broken so no further circular check
@@ -102,7 +102,7 @@ void ClassTable::InstallClasses(Classes classes) {
 void ClassTable::AddClass(Class_ c) {
     Symbol name = c->GetName();
     if (HasClass(name) || name == SELF_TYPE) {
-        if (basic_classes.find(name) != basic_classes.cend()) {
+        if (IsBasic(name)) {
             semant_error(c) << "Redefinition of basic class " << name << ".\n";
         } else {
             semant_error(c) << "Class "<< name << " was previously defined." << '\n';
@@ -114,6 +114,14 @@ void ClassTable::AddClass(Class_ c) {
 
 bool ClassTable::HasClass(Symbol name) const {
     return find(name) != cend();
+}
+
+bool ClassTable::IsBasic(Symbol name) const {
+    return basic_classes.find(name) != basic_classes.cend();
+}
+
+bool ClassTable::IsFinal(Symbol name) const {
+    return final_classes.find(name) != final_classes.cend();
 }
 
 void ClassTable::install_basic_classes() {
@@ -261,10 +269,10 @@ ostream &ClassTable::semant_error() {
     return error_stream;
 }
 
-void ClassTable::CheckNoInheritanceFromBasicClass() {
+void ClassTable::CheckNoInheritanceFromFinal() {
     for (auto [name, clss] : *this) {
         Symbol pname = clss->GetParentName();
-        if (final_classes.find(pname) != final_classes.cend()) {
+        if (IsFinal(pname)) {
             semant_error(clss) << "Class " << name << " cannot inherit class "
                                << pname << ".\n";
         }

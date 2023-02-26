@@ -26,16 +26,19 @@ class ClassTable : public std::unordered_map<Symbol, Class_> {
 private:
   int semant_errors;
   std::unordered_set<Symbol> basic_classes{};
+  bool IsBasic(Symbol name) const;
   std::unordered_set<Symbol> final_classes{};
+  bool IsFinal(Symbol name) const;
   void install_basic_classes();
   void InstallClasses(Classes);
   ostream& error_stream;
-  void CheckNoInheritanceFromBasicClass();
+  void CheckNoInheritanceFromFinal();
   void CheckNoUndeclaredBaseClass();
   void CheckNoCircularInheritance();
 
 public:
   ClassTable(Classes);
+  // Shows semantic error if Redefinition occurs.
   void AddClass(Class_ c);
   bool HasClass(Symbol name) const;
   int errors() { return semant_errors; }
