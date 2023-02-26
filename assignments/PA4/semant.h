@@ -3,7 +3,7 @@
 
 #include <assert.h>
 #include <iostream>
-#include <map>
+#include <unordered_map>
 #include "cool-tree.h"
 #include "stringtab.h"
 #include "symtab.h"
@@ -21,7 +21,7 @@ typedef ClassTable *ClassTableP;
 // you like: it is only here to provide a container for the supplied
 // methods.
 
-class ClassTable : public std::map<Symbol, Class_> {
+class ClassTable : public std::unordered_map<Symbol, Class_> {
 private:
   int semant_errors;
   void install_basic_classes();
