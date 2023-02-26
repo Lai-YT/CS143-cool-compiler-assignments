@@ -25,17 +25,17 @@ typedef ClassTable *ClassTableP;
 class ClassTable : public std::unordered_map<Symbol, Class_> {
 private:
   int semant_errors;
+  std::unordered_set<Symbol> basic_classes{};
+  std::unordered_set<Symbol> final_classes{};
   void install_basic_classes();
   void InstallClasses(Classes);
   ostream& error_stream;
-  std::unordered_set<Symbol> final_classes{};
   void CheckNoInheritingFromBasic();
   void CheckDeclaration();
   void CheckCircularInheritance();
 
 public:
   ClassTable(Classes);
-  void AddFinalClass(Class_ c);
   void AddClass(Class_ c);
   bool HasClass(Symbol name) const;
   int errors() { return semant_errors; }

@@ -100,12 +100,16 @@ void ClassTable::InstallClasses(Classes classes) {
 }
 
 void ClassTable::AddClass(Class_ c) {
-    emplace(c->GetName(), c);
-}
-
-void ClassTable::AddFinalClass(Class_ c) {
-    AddClass(c);
-    final_classes.insert(c->GetName());
+    Symbol name = c->GetName();
+    if (HasClass(name) || name == SELF_TYPE) {
+        if (basic_classes.find(name) != basic_classes.cend()) {
+            semant_error(c) << "Redefinition of basic class " << name << ".\n";
+        } else {
+            semant_error(c) << "Class "<< name << " was previously defined." << '\n';
+        }
+        return;
+    }
+    emplace(name, c);
 }
 
 bool ClassTable::HasClass(Symbol name) const {
@@ -144,6 +148,8 @@ void ClassTable::install_basic_classes() {
 					       single_Features(method(type_name, nil_Formals(), Str, no_expr()))),
 			       single_Features(method(copy, nil_Formals(), SELF_TYPE, no_expr()))),
 	       filename);
+    AddClass(Object_class);
+    basic_classes.insert(Object_class->GetName());
 
     //
     // The IO class inherits from Object. Its methods are
@@ -165,6 +171,8 @@ void ClassTable::install_basic_classes() {
 					       single_Features(method(in_string, nil_Formals(), Str, no_expr()))),
 			       single_Features(method(in_int, nil_Formals(), Int, no_expr()))),
 	       filename);
+    AddClass(IO_class);
+    basic_classes.insert(IO_class->GetName());
 
     //
     // The Int class has no methods and only a single attribute, the
@@ -175,12 +183,18 @@ void ClassTable::install_basic_classes() {
 	       Object,
 	       single_Features(attr(val, prim_slot, no_expr())),
 	       filename);
+    AddClass(Int_class);
+    basic_classes.insert(Int_class->GetName());
+    final_classes.insert(Int_class->GetName());
 
     //
     // Bool also has only the "val" slot.
     //
     Class_ Bool_class =
 	class_(Bool, Object, single_Features(attr(val, prim_slot, no_expr())),filename);
+    AddClass(Bool_class);
+    basic_classes.insert(Bool_class->GetName());
+    final_classes.insert(Bool_class->GetName());
 
     //
     // The class Str has a number of slots and operations:
@@ -210,12 +224,12 @@ void ClassTable::install_basic_classes() {
 						      Str,
 						      no_expr()))),
 	       filename);
+    AddClass(Str_class);
+    basic_classes.insert(Str_class->GetName());
+    final_classes.insert(Str_class->GetName());
 
-    AddClass(Object_class);
-    AddClass(IO_class);
-    AddFinalClass(Int_class);
-    AddFinalClass(Bool_class);
-    AddFinalClass(Str_class);
+    basic_classes.insert(SELF_TYPE);
+    final_classes.insert(SELF_TYPE);
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -247,7 +261,6 @@ ostream &ClassTable::semant_error() {
     return error_stream;
 }
 
-
 void ClassTable::CheckNoInheritingFromBasic() {
     for (auto [name, clss] : *this) {
         Symbol pname = clss->GetParentName();
@@ -261,7 +274,7 @@ void ClassTable::CheckNoInheritingFromBasic() {
 void ClassTable::CheckDeclaration() {
     for (auto [name, clss] : *this) {
         Symbol pname = clss->GetParentName();
-        if (pname != No_class && !HasClass(pname)) {
+        if (!HasClass(pname) && pname != No_class && pname != SELF_TYPE) {
             semant_error(clss)
                 << "Class " << name << " inherits from an undefined class "
                 << pname << ".\n";
