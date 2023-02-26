@@ -91,6 +91,11 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
         return;
     }
     CheckNoCircularInheritance();
+    if (semant_errors) {
+        // the graph is ill-formed so no further check
+        return;
+    }
+    CheckHasMainClass();
 }
 
 void ClassTable::InstallClasses(Classes classes) {
@@ -303,6 +308,12 @@ void ClassTable::CheckNoCircularInheritance() {
             assert(HasClass(pname));
             pname = at(pname)->GetParentName();
         }
+    }
+}
+
+void ClassTable::CheckHasMainClass() {
+    if (!HasClass(Main)) {
+        semant_error() << "Class " << Main << " is not defined." << '\n';
     }
 }
 

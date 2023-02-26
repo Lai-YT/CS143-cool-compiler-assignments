@@ -35,6 +35,7 @@ private:
   void CheckNoInheritanceFromFinal();
   void CheckNoUndeclaredBaseClass();
   void CheckNoCircularInheritance();
+  void CheckHasMainClass();
 
 public:
   ClassTable(Classes);
