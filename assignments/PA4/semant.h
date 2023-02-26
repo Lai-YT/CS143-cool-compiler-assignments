@@ -30,9 +30,9 @@ private:
   void install_basic_classes();
   void InstallClasses(Classes);
   ostream& error_stream;
-  void CheckNoInheritingFromBasic();
-  void CheckDeclaration();
-  void CheckCircularInheritance();
+  void CheckNoInheritanceFromBasicClass();
+  void CheckNoUndeclaredBaseClass();
+  void CheckNoCircularInheritance();
 
 public:
   ClassTable(Classes);

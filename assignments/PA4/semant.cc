@@ -84,13 +84,13 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
     InstallClasses(classes);
 
     // second pass(es): check inheritance
-    CheckNoInheritingFromBasic();
-    CheckDeclaration();
+    CheckNoInheritanceFromBasicClass();
+    CheckNoUndeclaredBaseClass();
     if (semant_errors) {
         // the graph is broken so no further circular check
         return;
     }
-    CheckCircularInheritance();
+    CheckNoCircularInheritance();
 }
 
 void ClassTable::InstallClasses(Classes classes) {
@@ -261,7 +261,7 @@ ostream &ClassTable::semant_error() {
     return error_stream;
 }
 
-void ClassTable::CheckNoInheritingFromBasic() {
+void ClassTable::CheckNoInheritanceFromBasicClass() {
     for (auto [name, clss] : *this) {
         Symbol pname = clss->GetParentName();
         if (final_classes.find(pname) != final_classes.cend()) {
@@ -271,7 +271,7 @@ void ClassTable::CheckNoInheritingFromBasic() {
     }
 }
 
-void ClassTable::CheckDeclaration() {
+void ClassTable::CheckNoUndeclaredBaseClass() {
     for (auto [name, clss] : *this) {
         Symbol pname = clss->GetParentName();
         if (!HasClass(pname) && pname != No_class && pname != SELF_TYPE) {
@@ -282,7 +282,7 @@ void ClassTable::CheckDeclaration() {
     }
 }
 
-void ClassTable::CheckCircularInheritance() {
+void ClassTable::CheckNoCircularInheritance() {
     for (auto [name, clss] : *this) {
         Symbol pname = clss->GetParentName();
         while (pname != No_class) {
