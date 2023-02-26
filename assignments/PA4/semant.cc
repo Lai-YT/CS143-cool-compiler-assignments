@@ -78,43 +78,34 @@ static void initialize_constants(void) {
 }
 
 ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
-    /* first pass: get name of the declared classes */
     install_basic_classes();
-    for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
-        Class_ curr_class = classes->nth(i);
-        add_class(curr_class->GetName(), curr_class->GetParentName());
-    }
 
-    /* second pass: check no inheriting on undeclared class */
-    for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
-        Class_ curr_class = classes->nth(i);
-        if (!has_class(curr_class->GetParentName())) {
-            semant_error(curr_class) << "Class " << curr_class->GetName()
-                                     << " inherits from an undefined class "
-                                     << curr_class->GetParentName() << ".\n";
-        }
-    }
+    // first pass: collect class
+    InstallClasses(classes);
+
+    // second pass(es): check inheritance
+    CheckDeclaration();
     if (semant_errors) {
         return;
     }
-    check_circular_inheritance();
-}
-
-void ClassTable::add_class(Symbol name) {
-    if (!graph.has_vertex(name)) {
-        graph.add_vertex(name);
+    CheckCircularInheritance();
+    if (semant_errors) {
+        return;
     }
 }
 
-void ClassTable::add_class(Symbol name, Symbol parent) {
-    if (!graph.has_edge(name, parent)) {
-        graph.add_edge(name, parent);
-        assert(graph.has_edge(name, parent));
+void ClassTable::InstallClasses(Classes classes) {
+    for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
+        AddClass(classes->nth(i));
     }
 }
 
-int ClassTable::has_class(Symbol name) const {
-    return graph.has_vertex(name);
+void ClassTable::AddClass(Class_ c) {
+    emplace(c->GetName(), c);
+}
+
+bool ClassTable::HasClass(Symbol name) const {
+    return find(name) != cend();
 }
 
 void ClassTable::install_basic_classes() {
@@ -149,8 +140,6 @@ void ClassTable::install_basic_classes() {
 					       single_Features(method(type_name, nil_Formals(), Str, no_expr()))),
 			       single_Features(method(copy, nil_Formals(), SELF_TYPE, no_expr()))),
 	       filename);
-    add_class(Object_class->GetParentName());
-    add_class(Object_class->GetName(), Object_class->GetParentName());
 
     //
     // The IO class inherits from Object. Its methods are
@@ -172,7 +161,6 @@ void ClassTable::install_basic_classes() {
 					       single_Features(method(in_string, nil_Formals(), Str, no_expr()))),
 			       single_Features(method(in_int, nil_Formals(), Int, no_expr()))),
 	       filename);
-    add_class(IO_class->GetName(), IO_class->GetParentName());
 
     //
     // The Int class has no methods and only a single attribute, the
@@ -218,6 +206,12 @@ void ClassTable::install_basic_classes() {
 						      Str,
 						      no_expr()))),
 	       filename);
+
+    AddClass(Object_class);
+    AddClass(IO_class);
+    AddClass(Int_class);
+    AddClass(Bool_class);
+    AddClass(Str_class);
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -249,137 +243,31 @@ ostream &ClassTable::semant_error() {
     return error_stream;
 }
 
-int equal_symbol(Symbol a, Symbol b) {
-    return a->equal_string(b->get_string(), b->get_len());
+void ClassTable::CheckDeclaration() {
+    for (auto [name, clss] : *this) {
+        Symbol pname = clss->GetParentName();
+        if (pname != No_class && !HasClass(pname)) {
+            semant_error(clss)
+                << "Class " << name << " inherits from an undefined class "
+                << pname << ".\n";
+        }
+    }
 }
 
-void ClassTable::check_circular_inheritance() {
-    List<Symbol> *visited = new List<Symbol>(NULL);
-    List<Symbol> *visiting = new List<Symbol>(NULL);
-    for (List<Symbol> *l = graph.vertices; l && l->hd(); l = l->tl()) {
-        Symbol vertex = *l->hd();
-        int is_visited = FALSE;
-        for (List<Symbol> *m = visited; m && m->hd(); m = m->tl()) {
-            if (equal_symbol(*m->hd(), vertex)) {
-                is_visited = TRUE;
+void ClassTable::CheckCircularInheritance() {
+    for (auto [name, clss] : *this) {
+        Symbol pname = clss->GetParentName();
+        while (pname != No_class) {
+            if (pname == name) {
+                semant_error(clss)
+                    << "Class " << name << ", or an ancestor of " << name
+                    << ", is involved in an inheritance cycle." << '\n';
+                break;
             }
-        }
-        if (is_visited) {
-            continue;
-        }
-        visiting = new List<Symbol>(new Symbol(vertex), visiting);
-        check_circular_inheritance(vertex, &visited, &visiting);
-        visiting = visiting->tl();
-        visited = new List<Symbol>(new Symbol(vertex), visited);
-    }
-}
-
-void ClassTable::check_circular_inheritance(Symbol to_visit,
-                                            List<Symbol> **visited,
-                                            List<Symbol> **visiting) {
-    for (List<Symbol> *l = *graph.find_edges(to_visit); l && l->hd();
-         l = l->tl()) {
-        Symbol parent = *l->hd();
-        int is_visiting = FALSE;
-        for (List<Symbol> *m = *visiting; m && m->hd(); m = m->tl()) {
-            if (equal_symbol(*m->hd(), parent)) {
-                is_visiting = TRUE;
-            }
-        }
-        if (is_visiting) {
-            semant_error() << "Class " << to_visit << ", or an ancestor of "
-                           << to_visit
-                           << ", is involved in an inheritance cycle." << '\n';
-            semant_error() << "Class " << parent << ", or an ancestor of "
-                           << parent << ", is involved in an inheritance cycle."
-                           << '\n';
-            continue;
-        }
-
-        int is_visited = FALSE;
-        for (List<Symbol> *m = *visited; m && m->hd(); m = m->tl()) {
-            if (equal_symbol(*m->hd(), parent)) {
-                is_visited = TRUE;
-            }
-        }
-
-        if (is_visited) {
-            continue;
-        } else {
-            *visiting = new List<Symbol>(new Symbol(parent), *visiting);
-            check_circular_inheritance(parent, visited, visiting);
-            *visiting = (*visiting)->tl();
-            *visited = new List<Symbol>(new Symbol(parent), *visited);
+            assert(HasClass(pname));
+            pname = at(pname)->GetParentName();
         }
     }
-}
-
-int InheritanceGraph::find_vertex_pos(Symbol vertex) const {
-    int pos = 0;
-    for (List<Symbol> *l = vertices; l && l->hd(); l = l->tl(), pos++) {
-        if (equal_symbol(*l->hd(), vertex)) {
-            break;
-        }
-    }
-    return pos;
-}
-
-List<Symbol> **InheritanceGraph::find_edges(int src_pos) const {
-    assert(src_pos < num_of_vertices);
-    List<List<Symbol> *> *l = adjacency_lists;
-    for (int pos = 0; pos < src_pos; l = l->tl(), pos++) {
-        ;
-    }
-    return l->hd();
-}
-
-List<Symbol> **InheritanceGraph::find_edges(Symbol vertex) const {
-    int pos = find_vertex_pos(vertex);
-    return find_edges(pos);
-}
-
-void InheritanceGraph::add_edge(Symbol src, Symbol dest) {
-    if (!has_vertex(src)) {
-        add_vertex(src);
-    }
-    List<Symbol> **adjacency_list_of_src = find_edges(src);
-    *adjacency_list_of_src =
-        new List<Symbol>(new Symbol(dest), *adjacency_list_of_src);
-}
-
-int InheritanceGraph::has_edge(Symbol src, Symbol dest) const {
-    if (!has_vertex(src)) {
-        return FALSE;
-    }
-
-    for (List<Symbol> *edges = *find_edges(src);
-         edges /* NULL if not having any edges */ && edges->hd();
-         edges = edges->tl()) {
-        if (equal_symbol(*edges->hd(), dest)) {
-            return TRUE;
-        }
-    }
-    return FALSE;
-}
-
-void InheritanceGraph::add_vertex(Symbol vertex) {
-    vertices = new List<Symbol>(new Symbol(vertex), vertices);
-    num_of_vertices++;
-
-    List<Symbol> *empty_adjacency_list = new List<Symbol>(NULL);
-    adjacency_lists = new List<List<Symbol> *>(
-        new List<Symbol> *(
-            empty_adjacency_list),  // takes yet one more layer of pointer
-        adjacency_lists);
-}
-
-int InheritanceGraph::has_vertex(Symbol vertex) const {
-    for (List<Symbol> *l = vertices; l && l->hd(); l = l->tl()) {
-        if (equal_symbol(*l->hd(), vertex)) {
-            return TRUE;
-        }
-    }
-    return FALSE;
 }
 
 /*   This is the entry point to the semantic checker.
