@@ -80,7 +80,7 @@ static void initialize_constants(void) {
 ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
     install_basic_classes();
 
-    // first pass: collect class
+    // first pass: collect classes
     InstallClasses(classes);
 
     // second pass(es): check inheritance
@@ -122,15 +122,15 @@ void ClassTable::install_basic_classes() {
     // with those variables at the end of this method to make this
     // code meaningful.
 
+    // There is no need for method bodies in the basic classes---these
+    // are already built in to the runtime system.
+
     //
     // The Object class has no parent class. Its methods are
     //        abort() : Object    aborts the program
     //        type_name() : Str   returns a string representation of class name
     //        copy() : SELF_TYPE  returns a copy of the object
     //
-    // There is no need for method bodies in the basic classes---these
-    // are already built in to the runtime system.
-
     Class_ Object_class =
 	class_(Object,
 	       No_class,
