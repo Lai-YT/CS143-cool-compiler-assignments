@@ -96,6 +96,10 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
         return;
     }
     CheckHasMainClass();
+    if (semant_errors) {
+        return;
+    }
+    CheckHasMainMethod();
 }
 
 void ClassTable::InstallClasses(Classes classes) {
@@ -311,10 +315,29 @@ void ClassTable::CheckNoCircularInheritance() {
     }
 }
 
+
 void ClassTable::CheckHasMainClass() {
     if (!HasClass(Main)) {
         semant_error() << "Class " << Main << " is not defined." << '\n';
     }
+}
+
+void ClassTable::CheckHasMainMethod() {
+    assert(HasClass(Main));
+
+    Class_ main = at(Main);
+    Features features = main->GetFeatures();
+    for (int i = features->first(); features->more(i); i = features->next(i)) {
+        Feature f = features->nth(i);
+        if (IsMethod(f) && f->GetName()->equal_string("main", 4)) {
+            return;
+        }
+    }
+    semant_error(main) << "No 'main' method in class " << Main << ".\n";
+}
+
+bool IsMethod(Feature f) {
+    return dynamic_cast<method_class *>(f);
 }
 
 /*   This is the entry point to the semantic checker.

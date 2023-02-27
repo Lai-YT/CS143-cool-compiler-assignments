@@ -32,10 +32,13 @@ private:
   void install_basic_classes();
   void InstallClasses(Classes);
   ostream& error_stream;
+
+  // these checks has to be called in a certain order
   void CheckNoInheritanceFromFinal();
   void CheckNoUndeclaredBaseClass();
   void CheckNoCircularInheritance();
   void CheckHasMainClass();
+  void CheckHasMainMethod();
 
 public:
   ClassTable(Classes);
@@ -48,5 +51,6 @@ public:
   ostream& semant_error(Symbol filename, tree_node *t);
 };
 
+bool IsMethod(Feature f);
 
 #endif

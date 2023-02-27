@@ -58,19 +58,23 @@ void dump_with_types(ostream&, int);
 virtual Symbol get_filename() = 0;        \
 virtual Symbol GetParentName() const = 0; \
 virtual Symbol GetName() const = 0;       \
+virtual Features GetFeatures() const = 0; \
 virtual void dump_with_types(ostream &, int) = 0;
 
-#define class__EXTRAS                           \
-Symbol get_filename() { return filename; }      \
-Symbol GetParentName() const { return parent; } \
-Symbol GetName() const { return name; }         \
+#define class__EXTRAS                             \
+Symbol get_filename() { return filename; }        \
+Symbol GetParentName() const { return parent; }   \
+Symbol GetName() const { return name; }           \
+Features GetFeatures() const { return features; } \
 void dump_with_types(ostream &, int);
 
-#define Feature_EXTRAS                                        \
+#define Feature_EXTRAS              \
+virtual Symbol GetName() const = 0; \
 virtual void dump_with_types(ostream&,int) = 0;
 
 
-#define Feature_SHARED_EXTRAS                                       \
+#define Feature_SHARED_EXTRAS           \
+Symbol GetName() const { return name; } \
 void dump_with_types(ostream&,int);
 
 
