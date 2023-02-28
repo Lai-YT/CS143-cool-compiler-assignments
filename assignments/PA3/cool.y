@@ -419,21 +419,42 @@ expr:
    *       |  expr = expr
    */
 | expr '+' expr
-  { $$ = plus($1, $3); }
+  {
+    SET_NODELOC(@2);
+    $$ = plus($1, $3);
+  }
 | expr '-' expr
-  { $$ = sub($1, $3); }
+  {
+    SET_NODELOC(@2);
+    $$ = sub($1, $3);
+  }
 | expr '*' expr
-  { $$ = mul($1, $3); }
+  {
+    SET_NODELOC(@2);
+    $$ = mul($1, $3);
+  }
 | expr '/' expr
-  { $$ = divide($1, $3); }
+  {
+    SET_NODELOC(@2);
+    $$ = divide($1, $3);
+  }
 | '~' expr
   { $$ = neg($2); }
 | expr '<' expr
-  { $$ = lt($1, $3); }
+  {
+    SET_NODELOC(@2);
+    $$ = lt($1, $3);
+  }
 | expr LE expr
-  { $$ = leq($1, $3); }
+  {
+    SET_NODELOC(@2);
+    $$ = leq($1, $3);
+  }
 | expr '=' expr
-  { $$ = eq($1, $3); }
+  {
+    SET_NODELOC(@2);
+    $$ = eq($1, $3);
+  }
   /*
    * expr ::= not expr
    */

@@ -1,7 +1,8 @@
 (*
- * by putting each symbol in a single line,
- * we know which one the line number depends on
+ * By putting each symbol in a single line,
+ * we know which one the line number depends on.
  *)
+
 class LineNumberOfLet {
    noAssign() : Int {
       let
@@ -83,5 +84,69 @@ class LineNumberOfLet {
          2
          in
             0
+   };
+};
+
+class LineNumberOfArithmeticOperators {
+   plus() : Int {
+      1
+      +
+      2
+   };
+
+   minus() : Int {
+      2
+      -
+      1
+   };
+
+   multiply() : Int {
+      1
+      *
+      2
+   };
+
+   divide() : Int {
+      2
+      /
+      1
+   };
+
+   i : Int;
+
+   assign() : Int {
+      i
+      <-
+      1
+   };
+
+   negate() : Int {
+      ~
+      1
+   };
+};
+
+class LineNumberOfBooleanOperators {
+   compliment() : Bool {
+      not
+      true
+   };
+
+   lessThan() : Bool {
+      1
+      <
+      2
+   };
+
+   lessThanOrEqualTo() : Bool {
+      1
+      <=
+      2
+   };
+
+   equalTo() : Bool {
+      1
+      =
+      2
    };
 };
