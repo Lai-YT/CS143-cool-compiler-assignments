@@ -300,15 +300,21 @@ formal:
  * The let construct with the following syntax has multiple forms, thus sophisticated.
  *    expr ::= let ID : TYPE [ <- expr ] [[ , ID : TYPE [ <- expr ] ]]* in expr
  * So pull it out as an individual section.
- * Also the let construct introduces an ambiguity into the language.
- * Resolve it by saying that a let expression extends as far to the right as possible.
+ *
+ * NOTE:
+ * (1) The let construct introduces an ambiguity into the language.
+ *    Resolve it by saying that a let expression extends as far to the right as possible.
+ * (2) The line number is set to where the OBJECTID is.
  */
 expr:
   /* Syntax:
    * expr ::= let ID : TYPE opt_assign in expr
    */
   LET OBJECTID ':' TYPEID opt_assign IN expr %prec EXTEND_EXPR
-  { $$ = let($2, $4, $5, $7); }
+  {
+    SET_NODELOC(@2);
+    $$ = let($2, $4, $5, $7);
+  }
   /*
    * expr ::= let ID : TYPE opt_assign trailing_let
    * Equivalent to let ID : TYPE opt_assign [[ , ID : TYPE opt_assign ]]+ in expr
@@ -318,7 +324,10 @@ expr:
    *   let constructs. We treat as if there's an IN before the trailing_let.
    */
 | LET OBJECTID ':' TYPEID opt_assign trailing_let
-  { $$ = let($2, $4, $5, $6); }
+  {
+    SET_NODELOC(@2);
+    $$ = let($2, $4, $5, $6);
+  }
 | LET error trailing_let
   { yyerrok; /* going on to the next variable */ }
 ;
@@ -327,12 +336,18 @@ trailing_let:
   /* Syntax:
    * trailing_let ::= [[ , ID : TYPE opt_assign ]]+ in expr
    *
-   * As an implementation detail, we treat ',' as LET to decompose them.
+   * NOTE: Treat ',' as LET to decompose them.
    */
   ',' OBJECTID ':' TYPEID opt_assign IN expr %prec EXTEND_EXPR
-  { $$ = let($2, $4, $5, $7); }
+  {
+    SET_NODELOC(@2);
+    $$ = let($2, $4, $5, $7);
+  }
 | ',' OBJECTID ':' TYPEID opt_assign trailing_let
-  { $$ = let($2, $4, $5, $6); }
+  {
+    SET_NODELOC(@2);
+    $$ = let($2, $4, $5, $6);
+  }
 | error trailing_let
   { yyerrok; /* going on to the next variable */ }
 | error IN expr %prec EXTEND_EXPR
