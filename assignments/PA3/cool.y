@@ -134,7 +134,7 @@
 %type <formal> formal
 %type <expressions> expr_list semi_colon_separated_expr_list
 %type <expression> trailing_let /* not a typo, it's indeed a single expression */
-%type <expression> expr
+%type <expression> expr opt_assign
 %type <cases> case_list
 %type <case_> case
 
@@ -218,16 +218,14 @@ feature_list:
 feature:
   /* Syntax:
    * feature ::= ID( formal_list ) : TYPE { expr };
-   *          |  ID : TYPE [ <- expr ];
+   *          |  ID : TYPE opt_assign;
    * The one above is a method construct;
    * the other one below is an attribute construct.
    */
   OBJECTID '(' formal_list ')' ':' TYPEID '{' expr '}' ';'
   { $$ = method($1, $3, $6, $8); }
-| OBJECTID ':' TYPEID ';'
-  { $$ = attr($1, $3, no_expr()); }
-| OBJECTID ':' TYPEID ASSIGN expr ';'
-  { $$ = attr($1, $3, $5); }
+| OBJECTID ':' TYPEID opt_assign ';'
+  { $$ = attr($1, $3, $4); }
 | error ';'
   { ; /* going on to the next feature */
     /*
@@ -286,42 +284,34 @@ formal:
  */
 expr:
   /* Syntax:
-   * expr ::= let ID : TYPE [ <- expr ] in expr
+   * expr ::= let ID : TYPE opt_assign in expr
    */
-  LET OBJECTID ':' TYPEID IN expr %prec EXTEND_EXPR
-  { $$ = let($2, $4, no_expr(), $6); }
-| LET OBJECTID ':' TYPEID ASSIGN expr IN expr %prec EXTEND_EXPR
-  { $$ = let($2, $4, $6, $8); }
+  LET OBJECTID ':' TYPEID opt_assign IN expr %prec EXTEND_EXPR
+  { $$ = let($2, $4, $5, $7); }
   /*
-   * expr ::= let ID : TYPE [ <- expr ] trailing_let
-   * Equivalent to let ID : TYPE [ <- expr ] [[ , ID : TYPE [ <- expr ] ]]+ in expr
+   * expr ::= let ID : TYPE opt_assign trailing_let
+   * Equivalent to let ID : TYPE opt_assign [[ , ID : TYPE opt_assign ]]+ in expr
    *
    * NOTE: Multiple IDs are not supported by a single let constructor in our
    *   AST, so we have to decompose the comma-separated ID list into multiple
    *   let constructs. We treat as if there's an IN before the trailing_let.
    */
-| LET OBJECTID ':' TYPEID trailing_let
-  { $$ = let($2, $4, no_expr(), $5); }
-| LET OBJECTID ':' TYPEID ASSIGN expr trailing_let
-  { $$ = let($2, $4, $6, $7); }
+| LET OBJECTID ':' TYPEID opt_assign trailing_let
+  { $$ = let($2, $4, $5, $6); }
 | LET error trailing_let
   { yyerrok; /* going on to the next variable */ }
 ;
 
 trailing_let:
   /* Syntax:
-   * trailing_let ::= [[ , ID : TYPE [ <- expr ] ]]+ in expr
+   * trailing_let ::= [[ , ID : TYPE opt_assign ]]+ in expr
    *
    * As an implementation detail, we treat ',' as LET to decompose them.
    */
-  ',' OBJECTID ':' TYPEID IN expr %prec EXTEND_EXPR
-  { $$ = let($2, $4, no_expr(), $6); }
-| ',' OBJECTID ':' TYPEID ASSIGN expr IN expr %prec EXTEND_EXPR
-  { $$ = let($2, $4, $6, $8); }
-| ',' OBJECTID ':' TYPEID trailing_let
-  { $$ = let($2, $4, no_expr(), $5); }
-| ',' OBJECTID ':' TYPEID ASSIGN expr trailing_let
-  { $$ = let($2, $4, $6, $7); }
+  ',' OBJECTID ':' TYPEID opt_assign IN expr %prec EXTEND_EXPR
+  { $$ = let($2, $4, $5, $7); }
+| ',' OBJECTID ':' TYPEID opt_assign trailing_let
+  { $$ = let($2, $4, $5, $6); }
 | error trailing_let
   { yyerrok; /* going on to the next variable */ }
 | error IN expr %prec EXTEND_EXPR
@@ -475,6 +465,16 @@ case:
    */
   OBJECTID ':' TYPEID DARROW expr ';'
   { $$ = branch($1, $3, $5); }
+;
+
+opt_assign:
+  /* Syntax:
+   * opt_assign ::= [ <- expr ]
+   */
+  /* empty */
+  { $$ = no_expr(); }
+| ASSIGN expr
+  { $$ = $2; }
 ;
 
 /* end of grammar */
