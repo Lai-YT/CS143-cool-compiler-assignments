@@ -183,7 +183,7 @@ class:
   /* Syntax:
    * class TYPE [inherits TYPE] { feature_list };
    */
-CLASS TYPEID '{' feature_list '}' ';'
+  CLASS TYPEID '{' feature_list '}' ';'
   {
     $$ = class_(
       $2,
@@ -217,10 +217,10 @@ feature_list:
 
 feature:
   /* Syntax:
-   * feature ::= ID( [ formal [[, formal]]* ] ) : TYPE { expr };
+   * feature ::= ID( formal_list ) : TYPE { expr };
    *          |  ID : TYPE [ <- expr ];
    * The one above is a method construct;
-   * another one below is a attribute construct.
+   * the other one below is an attribute construct.
    */
   OBJECTID '(' formal_list ')' ':' TYPEID '{' expr '}' ';'
   { $$ = method($1, $3, $6, $8); }
@@ -233,19 +233,24 @@ feature:
     /*
      * Not resuming immediately with "yyerrok" because of the behavior of the
      * reference Cool parser. Here's the specific example,
-     *  class A { (* ERROR: missing enclosing bracket *)
+     *
+     *  class A {
+     *    (* ERROR: missing enclosing bracket *)
      *  ;
-     *  class B { (* OK *)
+     *  class B {
+     *    (* OK *)
      *  };
+     *
      * The first ';' causes a syntax error during the parsing of the feature (not class!).
-     * If resumes immediately, the second "class" causes another error, since
+     * If resumes immediately. The second "class" causes another error since
      * we're still in the body of the first class, and nesting class isn't allowed.
-     * The reference parser does not report such an error, which means we can't
+     * The reference parser DOES NOT report such an error, which means we can't
      * resume immediately.
+     *
      * Though the correct guess is to mark "class A" as an error class and to
      * discard up to the first ';', our grammar doesn't support such an intelligent
-     * guess. So let Bison suppress it, only after three consecutive input tokens
-     * have been successfully shifted will error messages resume".
+     * guess. So let Bison suppress it. Only after 3 consecutive input tokens
+     * successfully shifted will error messages resume.
      */
   }
 ;
@@ -297,10 +302,10 @@ semi_colon_separated_expr_list:
 /*
  * Let.
  *
- * The let construct with the following syntax has multiple forms thus sophisticated.
+ * The let construct with the following syntax has multiple forms, thus sophisticated.
  *    expr ::= let ID : TYPE [ <- expr ] [[ , ID : TYPE [ <- expr ] ]]* in expr
  * So pull it out as an individual section.
- * Also he Cool let construct introduces an ambiguity into the language.
+ * Also the let construct introduces an ambiguity into the language.
  * Resolve it by saying that a let expression extends as far to the right as possible.
  */
 expr:
@@ -316,7 +321,7 @@ expr:
    * Equivalent to let ID : TYPE [ <- expr ] [[ , ID : TYPE [ <- expr ] ]]+ in expr
    *
    * NOTE: Multiple IDs are not supported by a single let constructor in our
-   *   AST, so we'll have to decompose the comma-separated ID list into multiple
+   *   AST, so we have to decompose the comma-separated ID list into multiple
    *   let constructs. We treat as if there's an IN before the trailing_let.
    */
 | LET OBJECTID ':' TYPEID trailing_let
@@ -345,8 +350,10 @@ trailing_let:
   { yyerrok; /* going on to the next variable */ }
 | error IN expr %prec EXTEND_EXPR
   { ;
-    /* I think it's OK to resume here because the error is bounded in the let
-      binding, but I'll follow the reported message of the reference parser. */
+    /*
+     * I think it's OK to resume here because the error is bounded in the let
+     * binding, but I'll follow the reported message of the reference parser.
+     */
   }
 ;
 
@@ -365,7 +372,7 @@ expr:
   { $$ = static_dispatch($1, $3, $5, $7); }
   /*
    * expr ::= ID( expr_list )
-   * which is a shorthand for self.ID( expr_list ).
+   * which is a shorthand for self.ID( expr_list )
    */
 | OBJECTID '(' expr_list ')'
   { $$ = dispatch(object(idtable.add_string("self")), $1, $3); }
