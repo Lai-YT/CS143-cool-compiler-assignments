@@ -27,6 +27,21 @@
   #define SET_NODELOC(Current)  \
     node_lineno = Current;
 
+  /*
+   * When the right-hand side of the grammar is an empty string, the line number
+   * may be set to a garbage. The line number should be kept as same as the
+   * previous construct, but if such grammar is applied to the first expression[*],
+   * uninitialized array value is read.
+   * [*] Not sure. One may trace "cool-parse.cc" to figure it out.
+   *
+   * To resolve this, we reset the line number to zero every time such grammar
+   * is applied, which is also what the reference parser does.
+   * This indeed losses the information, so one may rewrite the grammar
+   * to avoid empty rhs (but you'll be different with the reference parser).
+   */
+  #define RESET_LOC_TO_RESOLVE_GARBAGE_LINENO \
+    SET_NODELOC(0);
+
   /* IMPORTANT NOTE ON LINE NUMBERS
   *********************************
   * The above definitions and macros cause every terminal in your grammar to
@@ -210,7 +225,10 @@ feature_list:
    *  "feature_list ::= feature" introduces ambiguity).
    */
   /* empty */
-  { $$ = nil_Features(); }
+  {
+    RESET_LOC_TO_RESOLVE_GARBAGE_LINENO;
+    $$ = nil_Features();
+  }
 | feature_list feature
   { $$ = append_Features($1, single_Features($2)); }
 ;
@@ -258,7 +276,10 @@ formal_list:
    * formal_list ::= [ formal [[, formal]]* ]
    */
   /* empty */
-  { $$ = nil_Formals(); }
+  {
+    RESET_LOC_TO_RESOLVE_GARBAGE_LINENO;
+    $$ = nil_Formals();
+  }
 | formal
   { $$ = single_Formals($1); }
 | formal_list ',' formal
@@ -430,7 +451,10 @@ expr_list:
    * expr_list ::= [ expr [[, expr]]* ]
    */
   /* empty */
-  { $$ = nil_Expressions(); }
+  {
+    RESET_LOC_TO_RESOLVE_GARBAGE_LINENO;
+    $$ = nil_Expressions();
+  }
 | expr
   { $$ = single_Expressions($1); }
 | expr_list ',' expr
@@ -472,7 +496,10 @@ opt_assign:
    * opt_assign ::= [ <- expr ]
    */
   /* empty */
-  { $$ = no_expr(); }
+  {
+    RESET_LOC_TO_RESOLVE_GARBAGE_LINENO;
+    $$ = no_expr();
+  }
 | ASSIGN expr
   { $$ = $2; }
 ;
