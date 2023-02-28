@@ -275,30 +275,6 @@ formal:
   { $$ = formal($1, $3); }
 ;
 
-expr_list:
-  /* Syntax:
-   * expr_list ::= [ expr [[, expr]]* ]
-   */
-  /* empty */
-  { $$ = nil_Expressions(); }
-| expr
-  { $$ = single_Expressions($1); }
-| expr_list ',' expr
-  { $$ = append_Expressions($1, single_Expressions($3)); }
-;
-
-semi_colon_separated_expr_list:
-  /* Syntax:
-   * semi_colon_separated_expr_list ::= [[expr;]]+
-   */
-  expr ';'
-  { $$ = single_Expressions($1); }
-| semi_colon_separated_expr_list expr ';'
-  { $$ = append_Expressions($1, single_Expressions($2)); }
-| error ';'
-  { yyerrok; /* going on to the next expression */ }
-;
-
 /*
  * Let.
  *
@@ -457,6 +433,30 @@ expr:
   { $$ = string_const($1); }
 | BOOL_CONST
   { $$ = bool_const($1); }
+;
+
+expr_list:
+  /* Syntax:
+   * expr_list ::= [ expr [[, expr]]* ]
+   */
+  /* empty */
+  { $$ = nil_Expressions(); }
+| expr
+  { $$ = single_Expressions($1); }
+| expr_list ',' expr
+  { $$ = append_Expressions($1, single_Expressions($3)); }
+;
+
+semi_colon_separated_expr_list:
+  /* Syntax:
+   * semi_colon_separated_expr_list ::= [[expr;]]+
+   */
+  expr ';'
+  { $$ = single_Expressions($1); }
+| semi_colon_separated_expr_list expr ';'
+  { $$ = append_Expressions($1, single_Expressions($2)); }
+| error ';'
+  { yyerrok; /* going on to the next expression */ }
 ;
 
 case_list:
