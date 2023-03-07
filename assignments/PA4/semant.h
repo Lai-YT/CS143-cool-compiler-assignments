@@ -40,6 +40,8 @@ private:
   void CheckHasMainClass();
   void CheckHasMainMethod();
 
+  void CheckNoUndefinedReturnType();
+
 public:
   ClassTable(Classes);
   // Shows semantic error if Redefinition occurs.

@@ -100,6 +100,7 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
         return;
     }
     CheckHasMainMethod();
+    CheckNoUndefinedReturnType();
 }
 
 void ClassTable::InstallClasses(Classes classes) {
@@ -334,6 +335,25 @@ void ClassTable::CheckHasMainMethod() {
         }
     }
     semant_error(main) << "No 'main' method in class " << Main << ".\n";
+}
+
+void ClassTable::CheckNoUndefinedReturnType() {
+    for (const auto [_, clss] : *this) {
+        const Features fs = clss->GetFeatures();
+        for (int i = fs->first(); fs->more(i); i = fs->next(i)) {
+            const Feature feature = fs->nth(i);
+            if (!IsMethod(feature)) {
+                continue;
+            }
+            const method_class *method = dynamic_cast<method_class *>(feature);
+            const Symbol return_type = method->GetReturnType();
+            if (!HasClass(return_type) && return_type != SELF_TYPE) {
+                semant_error(clss->get_filename(), feature)
+                    << "Undefined return type " << return_type << " in method "
+                    << method->GetName() << ".\n";
+            }
+        }
+    }
 }
 
 bool IsMethod(Feature f) {

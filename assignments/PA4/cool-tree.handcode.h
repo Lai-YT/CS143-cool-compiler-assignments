@@ -79,6 +79,8 @@ void dump_with_types(ostream&,int);
 
 
 
+#define method_EXTRAS \
+Symbol GetReturnType() const { return return_type; }
 
 
 #define Formal_EXTRAS                              \
