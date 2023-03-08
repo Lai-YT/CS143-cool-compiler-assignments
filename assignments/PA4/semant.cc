@@ -358,6 +358,10 @@ void ClassTable::CheckNoUndefinedReturnType() {
     }
 }
 
+/*
+ * When facing multiple errors, only one of them is reported.
+ * The precedence is (1) return type (2) number of formal (3) formal type".
+ */
 void ClassTable::CheckRedefinedMethodMatchAncestor() {
     for (const auto [_, clss] : *this) {
         for (const Method method : GetMethods(clss)) {
@@ -371,12 +375,21 @@ void ClassTable::CheckRedefinedMethodMatchAncestor() {
                         continue;
                     }
                     has_found_ancestor_method = true;
+                    if (method->GetReturnType() != pmethod->GetReturnType()) {
+                        semant_error(clss->get_filename(), method)
+                            << "In redefined method " << method->GetName()
+                            << ", return type " << method->GetReturnType()
+                            << " is different from original return type "
+                            << pmethod->GetReturnType() << ".\n";
+                        continue;
+                    }
                     const Formals pformals = pmethod->GetFormals();
                     if (formals->len() != pformals->len()) {
                         semant_error(clss->get_filename(), method)
                             << "Incompatible number of formal parameters in "
                                "redefined method "
                             << method->GetName() << ".\n";
+                        continue;
                     }
                     for (int i = formals->first(), j = pformals->first();
                          formals->more(i) && pformals->more(j);
@@ -391,14 +404,8 @@ void ClassTable::CheckRedefinedMethodMatchAncestor() {
                                 << ", parameter type " << formal_type
                                 << " is different from original type "
                                 << pformal_type << '\n';
+                            continue;
                         }
-                    }
-                    if (method->GetReturnType() != pmethod->GetReturnType()) {
-                        semant_error(clss->get_filename(), method)
-                            << "In redefined method " << method->GetName()
-                            << ", return type " << method->GetReturnType()
-                            << " is different from original return type "
-                            << pmethod->GetReturnType() << ".\n";
                     }
                 }
             }
