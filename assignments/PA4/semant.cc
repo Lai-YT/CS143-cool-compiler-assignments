@@ -112,7 +112,7 @@ void ClassTable::InstallClasses(Classes classes) {
 }
 
 void ClassTable::AddClass(Class_ c) {
-    Symbol name = c->GetName();
+    const Symbol name = c->GetName();
     if (HasClass(name) || name == SELF_TYPE) {
         if (IsBasic(name)) {
             semant_error(c) << "Redefinition of basic class " << name << ".\n";
@@ -338,10 +338,10 @@ void ClassTable::CheckHasMainClass() {
 void ClassTable::CheckHasMainMethod() {
     assert(HasClass(Main));
 
-    Class_ main = at(Main);
-    Features features = main->GetFeatures();
+    const Class_ main = at(Main);
+    const Features features = main->GetFeatures();
     for (int i = features->first(); features->more(i); i = features->next(i)) {
-        Feature f = features->nth(i);
+        const Feature f = features->nth(i);
         if (IsMethod(f) && f->GetName()->equal_string("main", 4)) {
             return;
         }
@@ -361,7 +361,7 @@ void ClassTable::CheckNoUndefinedReturnType() {
             if (!IsMethod(feature)) {
                 continue;
             }
-            const method_class *method = dynamic_cast<method_class *>(feature);
+            const Method method = dynamic_cast<Method>(feature);
             const Symbol return_type = method->GetReturnType();
             if (!HasClass(return_type) && return_type != SELF_TYPE) {
                 semant_error(clss->get_filename(), feature)
@@ -428,7 +428,7 @@ void ClassTable::CheckRedefinedMethodMatchAncestor() {
     }
 }
 
-std::vector<Method> ClassTable::GetMethods(Class_ clss) {
+std::vector<Method> GetMethods(const Class_ clss) {
     std::vector<Method> methods;
     const Features fs = clss->GetFeatures();
     for (int i = fs->first(); fs->more(i); i = fs->next(i)) {
@@ -440,8 +440,8 @@ std::vector<Method> ClassTable::GetMethods(Class_ clss) {
     return methods;
 }
 
-bool IsMethod(Feature f) {
-    return dynamic_cast<method_class *>(f);
+bool IsMethod(const Feature f) {
+    return dynamic_cast<Method>(f);
 }
 
 /*   This is the entry point to the semantic checker.

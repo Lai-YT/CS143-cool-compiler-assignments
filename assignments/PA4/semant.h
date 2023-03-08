@@ -36,8 +36,6 @@ private:
   void InstallClasses(Classes);
   ostream& error_stream;
 
-  std::vector<Method> GetMethods(Class_);
-
   // these checks has to be called in a certain order
   void CheckNoInheritanceFromFinal();
   void CheckNoUndeclaredBaseClass();
@@ -59,6 +57,7 @@ public:
   ostream& semant_error(Symbol filename, tree_node *t);
 };
 
-bool IsMethod(Feature f);
+bool IsMethod(const Feature f);
+std::vector<Method> GetMethods(const Class_);
 
 #endif
