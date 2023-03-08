@@ -281,9 +281,13 @@ ostream &ClassTable::semant_error() {
     return error_stream;
 }
 
+/*
+ * Errors should be reported in descending order by the line number.
+ */
 void ClassTable::CheckNoInheritanceFromFinal() {
-    for (auto [name, clss] : *this) {
-        Symbol pname = clss->GetParentName();
+    for (auto iter = rbegin(); iter != rend(); iter++) {
+        const auto [name, clss] = *iter;
+        const Symbol pname = clss->GetParentName();
         if (IsFinal(pname)) {
             semant_error(clss) << "Class " << name << " cannot inherit class "
                                << pname << ".\n";
@@ -291,9 +295,13 @@ void ClassTable::CheckNoInheritanceFromFinal() {
     }
 }
 
+/*
+ * Errors should be reported in descending order by the line number.
+ */
 void ClassTable::CheckNoUndeclaredBaseClass() {
-    for (auto [name, clss] : *this) {
-        Symbol pname = clss->GetParentName();
+    for (auto iter = rbegin(); iter != rend(); iter++) {
+        const auto [name, clss] = *iter;
+        const Symbol pname = clss->GetParentName();
         if (!HasClass(pname) && pname != No_class && pname != SELF_TYPE) {
             semant_error(clss)
                 << "Class " << name << " inherits from an undefined class "
@@ -302,10 +310,14 @@ void ClassTable::CheckNoUndeclaredBaseClass() {
     }
 }
 
+/*
+ * Errors should be reported in descending order by the line number.
+ */
 void ClassTable::CheckNoCircularInheritance() {
-    for (auto [name, clss] : *this) {
-        Symbol pname = clss->GetParentName();
-        while (pname != No_class) {
+    for (auto iter = rbegin(); iter != rend(); iter++) {
+        const auto [name, clss] = *iter;
+        for (Symbol pname = clss->GetParentName(); pname != No_class;
+             pname = at(pname)->GetParentName()) {
             if (pname == name) {
                 semant_error(clss)
                     << "Class " << name << ", or an ancestor of " << name
@@ -313,11 +325,9 @@ void ClassTable::CheckNoCircularInheritance() {
                 break;
             }
             assert(HasClass(pname));
-            pname = at(pname)->GetParentName();
         }
     }
 }
-
 
 void ClassTable::CheckHasMainClass() {
     if (!HasClass(Main)) {
@@ -339,8 +349,12 @@ void ClassTable::CheckHasMainMethod() {
     semant_error(main) << "No 'main' method in class " << Main << ".\n";
 }
 
+/*
+ * Errors should be reported in ascending order by the line number.
+ */
 void ClassTable::CheckNoUndefinedReturnType() {
-    for (const auto [_, clss] : *this) {
+    for (auto iter = rbegin(); iter != rend(); iter++) {
+        const auto [name, clss] = *iter;
         const Features fs = clss->GetFeatures();
         for (int i = fs->first(); fs->more(i); i = fs->next(i)) {
             const Feature feature = fs->nth(i);
@@ -359,7 +373,8 @@ void ClassTable::CheckNoUndefinedReturnType() {
 }
 
 /*
- * When facing multiple errors, only one of them is reported.
+ * Errors should be reported in ascending order by the line number.
+ * When facing multiple errors on a single method, only one of them is reported.
  * The precedence is (1) return type (2) number of formal (3) formal type".
  */
 void ClassTable::CheckRedefinedMethodMatchAncestor() {

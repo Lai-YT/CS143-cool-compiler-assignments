@@ -3,7 +3,7 @@
 
 #include <assert.h>
 #include <iostream>
-#include <unordered_map>
+#include <map>
 #include <unordered_set>
 #include <vector>
 #include "cool-tree.h"
@@ -25,7 +25,7 @@ typedef method_class *Method;
 // you like: it is only here to provide a container for the supplied
 // methods.
 
-class ClassTable : public std::unordered_map<Symbol, Class_> {
+class ClassTable : public std::map<Symbol, Class_> {
 private:
   int semant_errors;
   std::unordered_set<Symbol> basic_classes{};
