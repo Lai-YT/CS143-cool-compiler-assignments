@@ -5,6 +5,7 @@
 #include <iostream>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 #include "cool-tree.h"
 #include "stringtab.h"
 #include "symtab.h"
@@ -15,6 +16,8 @@
 
 class ClassTable;
 typedef ClassTable *ClassTableP;
+
+typedef method_class *Method;
 
 
 // This is a structure that may be used to contain the semantic
@@ -33,6 +36,8 @@ private:
   void InstallClasses(Classes);
   ostream& error_stream;
 
+  std::vector<Method> GetMethods(Class_);
+
   // these checks has to be called in a certain order
   void CheckNoInheritanceFromFinal();
   void CheckNoUndeclaredBaseClass();
@@ -41,6 +46,7 @@ private:
   void CheckHasMainMethod();
 
   void CheckNoUndefinedReturnType();
+  void CheckRedefinedMethodMatchAncestor();
 
 public:
   ClassTable(Classes);

@@ -80,14 +80,17 @@ void dump_with_types(ostream&,int);
 
 
 #define method_EXTRAS \
-Symbol GetReturnType() const { return return_type; }
+Symbol GetReturnType() const { return return_type; } \
+Formals GetFormals() const { return formals; }
 
 
-#define Formal_EXTRAS                              \
-virtual void dump_with_types(ostream&,int) = 0;
+#define Formal_EXTRAS                   \
+virtual Symbol GetDeclType() const = 0; \
+virtual void dump_with_types(ostream &, int) = 0;
 
 
-#define formal_EXTRAS                           \
+#define formal_EXTRAS                            \
+Symbol GetDeclType() const { return type_decl; } \
 void dump_with_types(ostream&,int);
 
 

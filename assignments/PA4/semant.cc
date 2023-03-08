@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <vector>
 #include "semant.h"
 #include "utilities.h"
 
@@ -101,6 +102,7 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
     }
     CheckHasMainMethod();
     CheckNoUndefinedReturnType();
+    CheckRedefinedMethodMatchAncestor();
 }
 
 void ClassTable::InstallClasses(Classes classes) {
@@ -354,6 +356,66 @@ void ClassTable::CheckNoUndefinedReturnType() {
             }
         }
     }
+}
+
+void ClassTable::CheckRedefinedMethodMatchAncestor() {
+    for (const auto [_, clss] : *this) {
+        for (const Method method : GetMethods(clss)) {
+            const Formals formals = method->GetFormals();
+            bool has_found_ancestor_method = false;
+            for (Symbol parent = clss->GetParentName();
+                 parent != No_class && !has_found_ancestor_method;
+                 parent = at(parent)->GetParentName()) {
+                for (const Method pmethod : GetMethods(at(parent))) {
+                    if (pmethod->GetName() != method->GetName()) {
+                        continue;
+                    }
+                    has_found_ancestor_method = true;
+                    const Formals pformals = pmethod->GetFormals();
+                    if (formals->len() != pformals->len()) {
+                        semant_error(clss->get_filename(), method)
+                            << "Incompatible number of formal parameters in "
+                               "redefined method "
+                            << method->GetName() << ".\n";
+                    }
+                    for (int i = formals->first(), j = pformals->first();
+                         formals->more(i) && pformals->more(j);
+                         i = formals->next(i), j = pformals->next(j)) {
+                        const Symbol formal_type =
+                            formals->nth(i)->GetDeclType();
+                        const Symbol pformal_type =
+                            pformals->nth(j)->GetDeclType();
+                        if (formal_type != pformal_type) {
+                            semant_error(clss->get_filename(), method)
+                                << "In redefined method " << method->GetName()
+                                << ", parameter type " << formal_type
+                                << " is different from original type "
+                                << pformal_type << '\n';
+                        }
+                    }
+                    if (method->GetReturnType() != pmethod->GetReturnType()) {
+                        semant_error(clss->get_filename(), method)
+                            << "In redefined method " << method->GetName()
+                            << ", return type " << method->GetReturnType()
+                            << " is different from original return type "
+                            << pmethod->GetReturnType() << ".\n";
+                    }
+                }
+            }
+        }
+    }
+}
+
+std::vector<Method> ClassTable::GetMethods(Class_ clss) {
+    std::vector<Method> methods;
+    const Features fs = clss->GetFeatures();
+    for (int i = fs->first(); fs->more(i); i = fs->next(i)) {
+        const Feature feature = fs->nth(i);
+        if (IsMethod(feature)) {
+            methods.push_back(dynamic_cast<Method>(feature));
+        }
+    }
+    return methods;
 }
 
 bool IsMethod(Feature f) {
