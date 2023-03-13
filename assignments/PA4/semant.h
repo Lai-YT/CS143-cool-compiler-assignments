@@ -44,7 +44,10 @@ private:
   std::vector<Class_> GetParents(const Class_) const;
 
 
-  // these checks has to be called in a certain order
+  /*
+   * these checks has to be called in a certain order
+   */
+
   void CheckNoInheritanceFromFinal();
   void CheckNoUndeclaredBaseClass();
   void CheckNoCircularInheritance();
@@ -52,9 +55,19 @@ private:
   void CheckHasMainMethod();
 
   void CheckNoUndefinedReturnType();
-  void CheckRedefinedMethodMatchAncestor();
 
-public:
+  void CheckNoMismatchRedefinedMethod();
+  /// @brief Checks whether the method as identical signature with the original
+  /// method. Shows error message if not.
+  /// @param method the redefined method to check
+  /// @param pmethod the original method in parent
+  /// @param filename where method locates. Used in error message.
+  void CheckNoMismatch(Method method, Method pmethod, Symbol filename);
+  void CheckReturnType(Method method, Method pmethod, Symbol filename);
+  void CheckNumberOfFormals(Method method, Method pmethod, Symbol filename);
+  void CheckFormalTypes(Method method, Method pmethod, Symbol filename);
+
+ public:
   ClassTable(Classes);
   // Shows semantic error if Redefinition occurs.
   void AddClass(Class_ c);
