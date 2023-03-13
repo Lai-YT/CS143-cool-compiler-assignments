@@ -114,14 +114,19 @@ void ClassTable::InstallClasses(Classes classes) {
 void ClassTable::AddClass(Class_ c) {
     const Symbol name = c->GetName();
     if (HasClass(name) || name == SELF_TYPE) {
-        if (IsBasic(name)) {
-            semant_error(c) << "Redefinition of basic class " << name << ".\n";
-        } else {
-            semant_error(c) << "Class "<< name << " was previously defined." << '\n';
-        }
-        return;
+        ShowRedefinitionError(c);
+    } else {
+        emplace(name, c);
     }
-    emplace(name, c);
+}
+
+void ClassTable::ShowRedefinitionError(Class_ c) {
+    const Symbol name = c->GetName();
+    if (IsBasic(name)) {
+        semant_error(c) << "Redefinition of basic class " << name << ".\n";
+    } else {
+        semant_error(c) << "Class " << name << " was previously defined.\n";
+    }
 }
 
 bool ClassTable::HasClass(Symbol name) const {
@@ -286,13 +291,16 @@ ostream &ClassTable::semant_error() {
  */
 void ClassTable::CheckNoInheritanceFromFinal() {
     for (auto iter = rbegin(); iter != rend(); iter++) {
-        const auto [name, clss] = *iter;
-        const Symbol pname = clss->GetParentName();
-        if (IsFinal(pname)) {
-            semant_error(clss) << "Class " << name << " cannot inherit class "
-                               << pname << ".\n";
+        const auto clss = iter->second;
+        if (IsFinal(clss->GetParentName())) {
+            ShowInheritanceFromFinalError(clss);
         }
     }
+}
+
+void ClassTable::ShowInheritanceFromFinalError(Class_ c) {
+    semant_error(c) << "Class " << c->GetName() << " cannot inherit class "
+                    << c->GetParentName() << ".\n";
 }
 
 /*
@@ -300,18 +308,23 @@ void ClassTable::CheckNoInheritanceFromFinal() {
  */
 void ClassTable::CheckNoUndeclaredBaseClass() {
     for (auto iter = rbegin(); iter != rend(); iter++) {
-        const auto [name, clss] = *iter;
+        const auto clss = iter->second;
         const Symbol pname = clss->GetParentName();
         if (!HasClass(pname) && pname != No_class && pname != SELF_TYPE) {
-            semant_error(clss)
-                << "Class " << name << " inherits from an undefined class "
-                << pname << ".\n";
+            ShowUndeclaredBaseClassError(clss);
         }
     }
 }
 
+void ClassTable::ShowUndeclaredBaseClassError(Class_ c) {
+    semant_error(c) << "Class " << c->GetName()
+                    << " inherits from an undefined class "
+                    << c->GetParentName() << ".\n";
+}
+
 /*
  * Errors should be reported in descending order by the line number.
+ * Throws Error if there's any circular inheritance.
  */
 void ClassTable::CheckNoCircularInheritance() {
     for (auto iter = rbegin(); iter != rend(); iter++) {
@@ -319,14 +332,17 @@ void ClassTable::CheckNoCircularInheritance() {
         for (Symbol pname = clss->GetParentName(); pname != No_class;
              pname = at(pname)->GetParentName()) {
             if (pname == name) {
-                semant_error(clss)
-                    << "Class " << name << ", or an ancestor of " << name
-                    << ", is involved in an inheritance cycle." << '\n';
+                ShowCircularInheritanceError(clss);
                 break;
             }
-            assert(HasClass(pname));
         }
     }
+}
+
+void ClassTable::ShowCircularInheritanceError(Class_ c) {
+    semant_error(c) << "Class " << c->GetName() << ", or an ancestor of "
+                    << c->GetName() << ", is involved in an inheritance cycle."
+                    << '\n';
 }
 
 void ClassTable::CheckHasMainClass() {
@@ -336,13 +352,9 @@ void ClassTable::CheckHasMainClass() {
 }
 
 void ClassTable::CheckHasMainMethod() {
-    assert(HasClass(Main));
-
     const Class_ main = at(Main);
-    const Features features = main->GetFeatures();
-    for (int i = features->first(); features->more(i); i = features->next(i)) {
-        const Feature f = features->nth(i);
-        if (IsMethod(f) && f->GetName()->equal_string("main", 4)) {
+    for (const Method method : GetMethods(main)) {
+        if (method->GetName()->equal_string("main", 4)) {
             return;
         }
     }
@@ -354,17 +366,11 @@ void ClassTable::CheckHasMainMethod() {
  */
 void ClassTable::CheckNoUndefinedReturnType() {
     for (auto iter = rbegin(); iter != rend(); iter++) {
-        const auto [name, clss] = *iter;
-        const Features fs = clss->GetFeatures();
-        for (int i = fs->first(); fs->more(i); i = fs->next(i)) {
-            const Feature feature = fs->nth(i);
-            if (!IsMethod(feature)) {
-                continue;
-            }
-            const Method method = dynamic_cast<Method>(feature);
+        const auto [_, clss] = *iter;
+        for (const Method method : GetMethods(clss)) {
             const Symbol return_type = method->GetReturnType();
             if (!HasClass(return_type) && return_type != SELF_TYPE) {
-                semant_error(clss->get_filename(), feature)
+                semant_error(clss->get_filename(), method)
                     << "Undefined return type " << return_type << " in method "
                     << method->GetName() << ".\n";
             }
@@ -438,6 +444,20 @@ std::vector<Method> GetMethods(const Class_ clss) {
         }
     }
     return methods;
+}
+
+/*
+ * Note that this function goes into infinite loop if contains circular
+ * inheritance.
+ */
+std::vector<Class_> ClassTable::GetParents(const Class_ clss) const {
+    std::vector<Class_> parents;
+    Symbol parent = clss->GetParentName();
+    while (parent != No_class) {  // emphasize the condition, while instead for
+        parents.push_back(at(parent));
+        parent = at(parent)->GetParentName();
+    }
+    return parents;
 }
 
 bool IsMethod(const Feature f) {

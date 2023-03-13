@@ -35,6 +35,14 @@ private:
   void install_basic_classes();
   void InstallClasses(Classes);
   ostream& error_stream;
+  void ShowRedefinitionError(Class_ c);
+  void ShowInheritanceFromFinalError(Class_ c);
+  void ShowUndeclaredBaseClassError(Class_ c);
+  void ShowCircularInheritanceError(Class_ c);
+
+  // Up until Object.
+  std::vector<Class_> GetParents(const Class_) const;
+
 
   // these checks has to be called in a certain order
   void CheckNoInheritanceFromFinal();
