@@ -110,11 +110,10 @@ void ClassTable::CheckClasses() {
 
 void ClassTable::CheckMethods() {
     CheckNoMismatchRedefinedMethod();
-    CheckNoRedefinedFormal();
     CheckNoFormalNamedSelf();
-    CheckNoUndefinedReturnType();
     CheckNoUndefinedFormalType();
-    // CheckNoUndeclaredIdentifier();
+    CheckNoRedefinedFormal();
+    CheckNoUndefinedReturnType();
 }
 
 void ClassTable::InstallClasses(Classes classes) {
