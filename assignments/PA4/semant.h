@@ -69,7 +69,6 @@ private:
    * Checks related to method.
    */
 
-  void CheckNoUndefinedReturnType();
   void CheckNoMismatchRedefinedMethod();
   /// @brief Checks whether the method as identical signature with the original
   /// method. Shows error message if not.
@@ -80,6 +79,11 @@ private:
   void CheckReturnType(Method method, Method pmethod, Symbol filename);
   void CheckNumberOfFormals(Method method, Method pmethod, Symbol filename);
   void CheckFormalTypes(Method method, Method pmethod, Symbol filename);
+  void CheckNoRedefinedFormal();
+  void CheckNoFormalNamedSelf();
+  void CheckNoUndefinedReturnType();
+  void CheckNoUndefinedFormalType();
+
   Classes classes;
   void CheckNoUndeclaredIdentifier();
 
