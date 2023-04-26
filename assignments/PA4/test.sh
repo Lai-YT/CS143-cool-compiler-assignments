@@ -10,7 +10,7 @@ DIFF_ARGS=(-y --width=60 --suppress-common-lines)
 # Taking the self-written tests file and examples as input, compare the
 # differences between the output of reference lexer and the output of our lexer.
 status=0
-for filename in ./tests/class/*.cl; do
+for filename in ./tests/class/*.cl ./tests/method/*.cl; do
   echo "--------Test using" "$filename" "--------"
   ./refsemant "$filename" &>refout
   ./mysemant "$filename" &>myout

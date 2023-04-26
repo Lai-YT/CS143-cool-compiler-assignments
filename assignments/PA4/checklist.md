@@ -12,11 +12,11 @@
 
 # Method
 
-- [ ] Check if the number of arguments, the types of the formal parameters, and the return type are exactly the same when a class tries to override the inherited method from an ancestor class
-- [ ] Check if `self` is the name of some formal parameter (not expected)
-- [ ] Check formal parameter redefinition (not expected)
-- [ ] Check if the declared type of formal parameter is defined (expected)
-- [ ] Check if the return type is defined (expected)
+- [ ] Check if the number of arguments, the types of the formal parameters, and the return type are exactly the same when a class tries to override the inherited method from an ancestor class: [unmatched_override](tests/method/unmatched_override.cl)
+- [ ] Check if `self` is the name of some formal parameter (not expected): [self_as_formal.cl](tests/method/self_as_formal.cl)
+- [ ] Check formal parameter redefinition (not expected): [formals_with_same_name.cl](tests/method/formals_with_same_name.cl)
+- [ ] Check if the declared type of formal parameter is defined (expected): [undefined_formal_type.cl](tests/method/undefined_formal_type.cl)
+- [ ] Check if the return type is defined (expected): [undefined_return_type.cl](tests/method/undefined_return_type.cl)
 - [ ] Check if the inferred return type conforms to the declared return type (expected)
 
 # Attribute
