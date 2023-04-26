@@ -80,6 +80,8 @@ private:
   void CheckReturnType(Method method, Method pmethod, Symbol filename);
   void CheckNumberOfFormals(Method method, Method pmethod, Symbol filename);
   void CheckFormalTypes(Method method, Method pmethod, Symbol filename);
+  Classes classes;
+  void CheckNoUndeclaredIdentifier();
 
  public:
   ClassTable(Classes);
@@ -92,6 +94,7 @@ private:
   /// These four checks are done in order, and errors on the former checks
   /// disable the latter checks (since they are meaningless under such errors).
   void CheckClasses();
+  void CheckMethods();
   int errors() { return semant_errors; }
   ostream& semant_error();
   ostream& semant_error(Class_ c);

@@ -84,12 +84,17 @@ Symbol GetReturnType() const { return return_type; } \
 Formals GetFormals() const { return formals; }
 
 
+#define attr_EXTRAS \
+Symbol GetDeclType() const { return type_decl; }
+
 #define Formal_EXTRAS                   \
+virtual Symbol GetName() const = 0;     \
 virtual Symbol GetDeclType() const = 0; \
 virtual void dump_with_types(ostream &, int) = 0;
 
 
 #define formal_EXTRAS                            \
+Symbol GetName() const { return name; }          \
 Symbol GetDeclType() const { return type_decl; } \
 void dump_with_types(ostream&,int);
 

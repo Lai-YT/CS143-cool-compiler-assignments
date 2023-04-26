@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <symtab.h>
 #include <vector>
 #include "semant.h"
 #include "utilities.h"
@@ -78,15 +79,13 @@ static void initialize_constants(void) {
     val         = idtable.add_string("_val");
 }
 
-ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
+ClassTable::ClassTable(Classes classes)
+    : semant_errors(0), error_stream(cerr), classes(classes) {
     install_basic_classes();
 
     // first pass: collect classes
     // Class redefinitions are detected early in this stage.
     InstallClasses(classes);
-
-    // CheckNoUndefinedReturnType();
-    // CheckNoMismatchRedefinedMethod();
 }
 
 void ClassTable::CheckClasses() {
@@ -106,6 +105,12 @@ void ClassTable::CheckClasses() {
         return;
     }
     CheckHasMainMethod();
+}
+
+void ClassTable::CheckMethods() {
+    CheckNoUndefinedReturnType();
+    CheckNoMismatchRedefinedMethod();
+    CheckNoUndeclaredIdentifier();
 }
 
 void ClassTable::InstallClasses(Classes classes) {
@@ -468,6 +473,49 @@ std::vector<Method> GetMethods(const Class_ clss) {
     return methods;
 }
 
+void ClassTable::CheckNoUndeclaredIdentifier() {
+    for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
+        Class_ clss = classes->nth(i);
+        Symbol name = clss->GetName();
+        auto features = clss->GetFeatures();
+        SymbolTable<Symbol, Class_> environment;
+        environment.enterscope();
+        // add the attributes of the current class
+        for (int j = features->first(); features->more(j);
+             j = features->next(j)) {
+            if (auto attr = dynamic_cast<attr_class *>(features->nth(j))) {
+                if (environment.probe(attr->GetName())) {
+                    semant_error(clss->get_filename(), attr)
+                        << "Attribute " << attr->GetName()
+                        << " is multiply defined in class.\n";
+                } else {
+                    environment.addid(attr->GetName(),
+                                      &at(attr->GetDeclType()));
+                }
+            }
+        }
+        // check each methods
+        for (const auto method : GetMethods(clss)) {
+            environment.enterscope();
+            Formals formals = method->GetFormals();
+            for (int i = formals->first(); formals->more(i);
+                 i = formals->next(i)) {
+                auto formal = formals->nth(i);
+                if (environment.probe(formal->GetName())) {
+                    semant_error(clss->get_filename(), method)
+                        << "Formal parameter " << formal->GetName()
+                        << " is multiply defined.\n";
+                } else {
+                    environment.addid(formal->GetName(),
+                                      &at(formal->GetDeclType()));
+                }
+            }
+            environment.exitscope();
+        }
+        environment.exitscope();
+    }
+}
+
 /*
  * Note that this function goes into infinite loop if contains circular
  * inheritance.
@@ -507,7 +555,12 @@ void program_class::semant() {
 
     /* some semantic analysis code may go here */
     classtable->CheckClasses();
+    if (classtable->errors()) {
+        cerr << "Compilation halted due to static semantic errors." << endl;
+        exit(1);
+    }
 
+    classtable->CheckMethods();
     if (classtable->errors()) {
         cerr << "Compilation halted due to static semantic errors." << endl;
         exit(1);
