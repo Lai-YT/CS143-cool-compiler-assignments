@@ -2,13 +2,13 @@
 
 # Class
 
-- [ ] Add 5 basic classes (`Object`, `IO`, `Int`, `Bool`, `Str`) to class table
-- [ ] Check if class `Main` and method `main` is defined (expected)
-- [ ] Check if `SELF_TYPE` is defined (not expected)
-- [ ] Check class or method redefinition (not expected)
-- [ ] Check if any class inherits from `Int`, `Str`, `Bool`, `SELF_TYPE`, or an undefined class (not expected)
-- [ ] Check if its parent class (`Object` by default) exists (expected)
-- [ ] Check inheritance cycle (not expected)
+- [x] Add 5 basic classes (`Object`, `IO`, `Int`, `Bool`, `Str`) to class table: indirectly with [redefined_basic.cl](tests/class/redefined_basic.cl)
+- [x] Check if class `Main` and method `main` is defined (expected): [no_Main.cl](tests/class/no_Main.cl), [no_main_method.cl](tests/class/no_main_method.cl)
+- [x] Check if `SELF_TYPE` is defined (not expected): [redefined_SELF_TYPE.cl](tests/class/redefined_SELF_TYPE.cl)
+- [x] Check class or method redefinition (not expected): [redefined_basic.cl](tests/redefined_basic.cl), [redefined_class.cl](tests/class/redefined_class.cl)
+- [x] Check if any class inherits from `Int`, `Str`, `Bool`, `SELF_TYPE` (not expected): [from_basic.cl](tests/class/from_basic.cl)
+- [x] Check if its parent class (`Object` by default) exists (expected): [undeclared_base.cl](tests/class/undeclared_base.cl)
+- [x] Check inheritance cycle (not expected): [circular.cl](tests/class/circular.cl)
 
 # Method
 
