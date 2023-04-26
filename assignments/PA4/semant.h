@@ -28,34 +28,48 @@ typedef method_class *Method;
 class ClassTable : public std::map<Symbol, Class_> {
 private:
   int semant_errors;
+  ostream& error_stream;
+
+  /*
+   * Common helpers.
+   */
+
   std::unordered_set<Symbol> basic_classes{};
   bool IsBasic(Symbol name) const;
   std::unordered_set<Symbol> final_classes{};
   bool IsFinal(Symbol name) const;
-  void install_basic_classes();
-  void InstallClasses(Classes);
-  ostream& error_stream;
-  void ShowRedefinitionError(Class_ c);
-  void ShowInheritanceFromFinalError(Class_ c);
-  void ShowUndeclaredBaseClassError(Class_ c);
-  void ShowCircularInheritanceError(Class_ c);
-
+  bool HasClass(Symbol name) const;
   // Up until Object.
   std::vector<Class_> GetParents(const Class_) const;
 
+  /*
+   * Checks done in the first pass.
+   */
+
+  void install_basic_classes();
+  void InstallClasses(Classes);
+  // Shows semantic error if Redefinition occurs.
+  void AddClass(Class_ c);
+  void ShowRedefinitionError(Class_ c);
 
   /*
-   * these checks has to be called in a certain order
+   * Checks related to class.
    */
 
   void CheckNoInheritanceFromFinal();
+  void ShowInheritanceFromFinalError(Class_ c);
   void CheckNoUndeclaredBaseClass();
+  void ShowUndeclaredBaseClassError(Class_ c);
   void CheckNoCircularInheritance();
+  void ShowCircularInheritanceError(Class_ c);
   void CheckHasMainClass();
   void CheckHasMainMethod();
 
-  void CheckNoUndefinedReturnType();
+  /*
+   * Checks related to method.
+   */
 
+  void CheckNoUndefinedReturnType();
   void CheckNoMismatchRedefinedMethod();
   /// @brief Checks whether the method as identical signature with the original
   /// method. Shows error message if not.
@@ -69,10 +83,6 @@ private:
 
  public:
   ClassTable(Classes);
-  // Shows semantic error if Redefinition occurs.
-  void AddClass(Class_ c);
-  bool HasClass(Symbol name) const;
-  int errors() { return semant_errors; }
   /// @brief Does the class-related checks.
   /// The checks are
   /// (1) no inheritance on final basic classes,
@@ -82,6 +92,7 @@ private:
   /// These four checks are done in order, and errors on the former checks
   /// disable the latter checks (since they are meaningless under such errors).
   void CheckClasses();
+  int errors() { return semant_errors; }
   ostream& semant_error();
   ostream& semant_error(Class_ c);
   ostream& semant_error(Symbol filename, tree_node *t);
