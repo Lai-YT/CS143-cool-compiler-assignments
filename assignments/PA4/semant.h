@@ -79,10 +79,10 @@ private:
   void CheckReturnType(Method method, Method pmethod, Symbol filename);
   void CheckNumberOfFormals(Method method, Method pmethod, Symbol filename);
   void CheckFormalTypes(Method method, Method pmethod, Symbol filename);
-  void CheckNoRedefinedFormal();
-  void CheckNoFormalNamedSelf();
-  void CheckNoUndefinedReturnType();
-  void CheckNoUndefinedFormalType();
+  void CheckNoFormalNamedSelf(const Class_ clss, const Method method);
+  void CheckNoUndefinedFormalType(const Class_ clss, const  Method method);
+  void CheckNoRedefinedFormal(const Class_ clss, const Method method);
+  void CheckNoUndefinedReturnType(const Class_ clss, const Method method);
 
   Classes classes;
   void CheckNoUndeclaredIdentifier();
@@ -98,6 +98,16 @@ private:
   /// These four checks are done in order, and errors on the former checks
   /// disable the latter checks (since they are meaningless under such errors).
   void CheckClasses();
+  /// @brief Does the method-related checks.
+  /// The checks are
+  /// (1) no difference from original
+  /// (2) no formal named self
+  /// (3) no undefined formal type
+  /// (4) no multiply defined formal
+  /// (5) no undefined return type
+  /// Keep checking even though their are previous errors.
+  /// @note Method redefinition is checked first over all classes, then the
+  /// remain checks are done method by method.
   void CheckMethods();
   int errors() { return semant_errors; }
   ostream& semant_error();

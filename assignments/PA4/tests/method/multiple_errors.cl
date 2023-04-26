@@ -1,3 +1,8 @@
+class Main inherits Base {
+   main() : Int { 0 };
+};
+
+
 class Base {
    method() : Int { 0 };
 };
@@ -12,10 +17,14 @@ class Base {
  * Errors should be reported in the above order.
  *)
 
-class Main inherits Base {
+class Derived1 inherits Base {
    method(formal : Int, self : Main, formal : UnknownType) : UnknownType {
       true
    };
+};
 
-   main() : Int { 0 };
+class Derived2 inherits Base {
+   method(formal : Int, self : Main, formal : UnknownType) : UnknownType {
+      true
+   };
 };
