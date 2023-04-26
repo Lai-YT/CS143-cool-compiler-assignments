@@ -73,6 +73,15 @@ private:
   void AddClass(Class_ c);
   bool HasClass(Symbol name) const;
   int errors() { return semant_errors; }
+  /// @brief Does the class-related checks.
+  /// The checks are
+  /// (1) no inheritance on final basic classes,
+  /// (2) no inheritance on undeclared classes,
+  /// (3) no circular inheritance,
+  /// (4) has a Main class with a main method.
+  /// These four checks are done in order, and errors on the former checks
+  /// disable the latter checks (since they are meaningless under such errors).
+  void CheckClasses();
   ostream& semant_error();
   ostream& semant_error(Class_ c);
   ostream& semant_error(Symbol filename, tree_node *t);

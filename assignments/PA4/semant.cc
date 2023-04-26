@@ -82,9 +82,14 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
     install_basic_classes();
 
     // first pass: collect classes
+    // Class redefinitions are detected early in this stage.
     InstallClasses(classes);
 
-    // second pass(es): check inheritance
+    // CheckNoUndefinedReturnType();
+    // CheckNoMismatchRedefinedMethod();
+}
+
+void ClassTable::CheckClasses() {
     CheckNoInheritanceFromFinal();
     CheckNoUndeclaredBaseClass();
     if (semant_errors) {
@@ -101,8 +106,6 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
         return;
     }
     CheckHasMainMethod();
-    CheckNoUndefinedReturnType();
-    CheckNoMismatchRedefinedMethod();
 }
 
 void ClassTable::InstallClasses(Classes classes) {
@@ -503,6 +506,7 @@ void program_class::semant() {
     ClassTable *classtable = new ClassTable(classes);
 
     /* some semantic analysis code may go here */
+    classtable->CheckClasses();
 
     if (classtable->errors()) {
         cerr << "Compilation halted due to static semantic errors." << endl;
