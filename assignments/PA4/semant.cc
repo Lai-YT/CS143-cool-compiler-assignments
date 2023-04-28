@@ -113,44 +113,44 @@ void ClassTable::CheckMethods() {
     for (int i = 0; classes->more(i); i = classes->next(i)) {
         const Class_ clss = classes->nth(i);
         for (const Method method : GetMethods(clss)) {
-            CheckNoFormalNamedSelf(clss, method);
-            CheckNoUndefinedFormalType(clss, method);
-            CheckNoRedefinedFormal(clss, method);
-            CheckNoUndefinedReturnType(clss, method);
+            CheckNoFormalNamedSelf(method, clss->get_filename());
+            CheckNoUndefinedFormalType(method, clss->get_filename());
+            CheckNoRedefinedFormal(method, clss->get_filename());
+            CheckNoUndefinedReturnType(method, clss->get_filename());
         }
     }
 }
 
-void ClassTable::CheckNoFormalNamedSelf(const Class_ clss, const Method method) {
+void ClassTable::CheckNoFormalNamedSelf(const Method method, const Symbol filename) {
     const Formals formals = method->GetFormals();
     for (int i = 0; formals->more(i); i = formals->next(i)) {
         const Formal formal = formals->nth(i);
         if (formal->GetName()->equal_string("self", 4)) {
-            semant_error(clss->get_filename(), method)
+            semant_error(filename, method)
                 << "'self' cannot be the name of a formal parameter.\n";
         }
     }
 }
 
-void ClassTable::CheckNoUndefinedFormalType(const Class_ clss, const Method method) {
+void ClassTable::CheckNoUndefinedFormalType(const Method method, const Symbol filename) {
     const Formals formals = method->GetFormals();
     for (int i = 0; formals->more(i); i = formals->next(i)) {
         const Formal formal = formals->nth(i);
         if (!HasClass(formal->GetDeclType())) {
-            semant_error(clss->get_filename(), method)
+            semant_error(filename, method)
                 << "Class " << formal->GetDeclType() << " of formal parameter "
                 << formal->GetName() << " is undefined.\n";
         }
     }
 }
 
-void ClassTable::CheckNoRedefinedFormal(const Class_ clss, const Method method) {
+void ClassTable::CheckNoRedefinedFormal(const Method method, const Symbol filename) {
     const Formals formals = method->GetFormals();
     std::unordered_set<Symbol> defined_formals{};
     for (int i = 0; formals->more(i); i = formals->next(i)) {
         const Formal formal = formals->nth(i);
         if (defined_formals.find(formal->GetName()) != defined_formals.cend()) {
-            semant_error(clss->get_filename(), method)
+            semant_error(filename, method)
                 << "Formal parameter " << formal->GetName()
                 << " is multiply defined.\n";
         } else {
@@ -159,10 +159,10 @@ void ClassTable::CheckNoRedefinedFormal(const Class_ clss, const Method method) 
     }
 }
 
-void ClassTable::CheckNoUndefinedReturnType(const Class_ clss, const Method method) {
+void ClassTable::CheckNoUndefinedReturnType(const Method method, const Symbol filename) {
     const Symbol return_type = method->GetReturnType();
     if (!HasClass(return_type) && return_type != SELF_TYPE) {
-        semant_error(clss->get_filename(), method)
+        semant_error(filename, method)
             << "Undefined return type " << return_type << " in method "
             << method->GetName() << ".\n";
     }

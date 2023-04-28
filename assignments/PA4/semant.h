@@ -69,10 +69,10 @@ private:
    * Checks related to method.
    */
 
-  void CheckNoFormalNamedSelf(const Class_ clss, const Method method);
-  void CheckNoUndefinedFormalType(const Class_ clss, const  Method method);
-  void CheckNoRedefinedFormal(const Class_ clss, const Method method);
-  void CheckNoUndefinedReturnType(const Class_ clss, const Method method);
+  void CheckNoFormalNamedSelf(const Method method, const Symbol filename);
+  void CheckNoUndefinedFormalType(const Method method, const Symbol filename);
+  void CheckNoRedefinedFormal(const Method method, const Symbol filename);
+  void CheckNoUndefinedReturnType(const Method method, const Symbol filename);
 
   Classes classes;
   void CheckNoUndeclaredIdentifier();
@@ -121,7 +121,7 @@ class MethodRedefinitionChecker {
 
   /// The current method being checked.
   Method method_;
-  // The original method in parent
+  // The original method in parent.
   Method pmethod_;
   /// Where the method locates. Used in error message.
   Symbol filename_;
