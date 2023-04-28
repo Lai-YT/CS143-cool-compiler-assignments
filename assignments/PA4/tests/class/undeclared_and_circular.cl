@@ -8,7 +8,7 @@ class Main inherits UndeclaredBase {
 
 (*
  * cycles are checked only if no undeclared base,
- * so you won't see a cicular inheritance error for the following
+ * so you won't see a circular inheritance error for the following
  *)
 class A inherits B {};
 

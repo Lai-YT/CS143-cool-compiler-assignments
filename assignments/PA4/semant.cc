@@ -101,11 +101,6 @@ void ClassTable::CheckClasses() {
         // the graph is ill-formed so no further check
         return;
     }
-    CheckHasMainClass();
-    if (semant_errors) {
-        return;
-    }
-    CheckHasMainMethod();
 }
 
 void ClassTable::CheckMethods() {
@@ -134,6 +129,7 @@ void ClassTable::CheckMethods() {
             }
         }
     }
+    CheckHasMainClassAndMainMethod();
     for (const auto [_, clss] : *this) {
         for (const Method method : GetMethods(clss)) {
             CheckNoFormalNamedSelf(method, clss->get_filename());
@@ -431,20 +427,18 @@ void ClassTable::ShowCircularInheritanceError(Class_ c) {
                     << '\n';
 }
 
-void ClassTable::CheckHasMainClass() {
-    if (!HasClass(Main)) {
+void ClassTable::CheckHasMainClassAndMainMethod() {
+    if (HasClass(Main)) {
+        const Class_ main = at(Main);
+        for (const Method method : GetMethods(main)) {
+            if (method->GetName()->equal_string("main", 4)) {
+                return;
+            }
+        }
+        semant_error(main) << "No 'main' method in class " << Main << ".\n";
+    } else {
         semant_error() << "Class " << Main << " is not defined." << '\n';
     }
-}
-
-void ClassTable::CheckHasMainMethod() {
-    const Class_ main = at(Main);
-    for (const Method method : GetMethods(main)) {
-        if (method->GetName()->equal_string("main", 4)) {
-            return;
-        }
-    }
-    semant_error(main) << "No 'main' method in class " << Main << ".\n";
 }
 
 /*

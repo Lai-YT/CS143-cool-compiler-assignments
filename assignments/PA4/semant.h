@@ -62,8 +62,7 @@ private:
   void ShowUndeclaredBaseClassError(Class_ c);
   void CheckNoCircularInheritance();
   void ShowCircularInheritanceError(Class_ c);
-  void CheckHasMainClass();
-  void CheckHasMainMethod();
+  void CheckHasMainClassAndMainMethod();
 
   /*
    * Checks related to method.
@@ -101,10 +100,11 @@ private:
   /// The checks are
   /// (1) no difference from original
   /// (2) no multiply defined method is a single class
-  /// (3) no formal named self
-  /// (4) no undefined formal type
-  /// (5) no multiply defined formal
-  /// (6) no undefined return type
+  /// (3) has Main class and main method
+  /// (4) no formal named self
+  /// (5) no undefined formal type
+  /// (6) no multiply defined formal
+  /// (7) no undefined return type
   /// Keep checking even though their are previous errors.
   /// @note Method redefinition is checked first along with the multiply
   /// definition over all classes, then the remain checks are done method by

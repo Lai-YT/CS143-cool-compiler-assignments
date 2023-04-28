@@ -1,8 +1,3 @@
-class Main inherits Base {
-   main() : Int { 0 };
-};
-
-
 class Base {
    method() : Int { 0 };
 };
@@ -19,7 +14,7 @@ class Base {
  *)
 
 class Derived1 inherits Base {
-   method(formal : Int, self : Main, formal : UnknownType) : UnknownType {
+   method(formal : Int, self : Derived1, formal : UnknownType) : UnknownType {
       true
    };
 
@@ -28,7 +23,7 @@ class Derived1 inherits Base {
 };
 
 class Derived2 inherits Base {
-   method(formal : Int, self : Main, formal : UnknownType) : UnknownType {
+   method(formal : Int, self : Derived2, formal : UnknownType) : UnknownType {
       true
    };
 
