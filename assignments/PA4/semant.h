@@ -69,6 +69,16 @@ private:
    * Checks related to method.
    */
 
+  void CheckNoMismatchRedefinedMethod();
+  /// @brief Checks whether the method as identical signature with the original
+  /// method. Shows error message if not.
+  /// @param method the redefined method to check
+  /// @param pmethod the original method in parent
+  /// @param filename where method locates. Used in error message.
+  void CheckNoMismatch(Method method, Method pmethod, Symbol filename);
+  void CheckReturnType(Method method, Method pmethod, Symbol filename);
+  void CheckNumberOfFormals(Method method, Method pmethod, Symbol filename);
+  void CheckFormalTypes(Method method, Method pmethod, Symbol filename);
   void CheckNoFormalNamedSelf(const Method method, const Symbol filename);
   void CheckNoUndefinedFormalType(const Method method, const Symbol filename);
   void CheckNoRedefinedFormal(const Method method, const Symbol filename);
@@ -107,29 +117,5 @@ private:
 
 bool IsMethod(const Feature f);
 std::vector<Method> GetMethods(const Class_);
-
-class MethodRedefinitionChecker {
- public:
-  MethodRedefinitionChecker(ClassTable *);
-
-  /// @brief Checks whether the method as identical signature with the original
-  /// method. Shows error message with the class table if not.
-  void CheckNoMismatchRedefinedMethod();
-
- private:
-  ClassTable* table_;
-
-  /// The current method being checked.
-  Method method_;
-  // The original method in parent.
-  Method pmethod_;
-  /// Where the method locates. Used in error message.
-  Symbol filename_;
-
-  void CheckNoMismatch_();
-  void CheckReturnType_();
-  void CheckNumberOfFormals_();
-  void CheckFormalTypes_();
-};
 
 #endif

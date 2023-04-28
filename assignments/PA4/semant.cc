@@ -109,7 +109,7 @@ void ClassTable::CheckClasses() {
 }
 
 void ClassTable::CheckMethods() {
-    MethodRedefinitionChecker{this}.CheckNoMismatchRedefinedMethod();
+    CheckNoMismatchRedefinedMethod();
     for (int i = 0; classes->more(i); i = classes->next(i)) {
         const Class_ clss = classes->nth(i);
         for (const Method method : GetMethods(clss)) {
@@ -424,6 +424,81 @@ void ClassTable::CheckHasMainMethod() {
     semant_error(main) << "No 'main' method in class " << Main << ".\n";
 }
 
+/**
+ * @note Errors should be reported in ascending order by the line number.
+ */
+void ClassTable::CheckNoMismatchRedefinedMethod() {
+    for (const auto [_, clss] : *this) {
+        for (const Method method : GetMethods(clss)) {
+            bool has_found_ancestor_method = false;
+            for (Symbol parent = clss->GetParentName();
+                 !has_found_ancestor_method && parent != No_class;
+                 parent = at(parent)->GetParentName()) {
+                for (const Method pmethod : GetMethods(at(parent))) {
+                    if (pmethod->GetName() == method->GetName()) {
+                        has_found_ancestor_method = true;
+                        CheckNoMismatch(method, pmethod, clss->get_filename());
+                    }
+                }
+            }
+        }
+    }
+}
+
+/*
+ * When facing multiple errors on a single method, only one of them is reported.
+ * The precedence is (1) return type (2) number of formal (3) formal type".
+ */
+void ClassTable::CheckNoMismatch(Method method, Method pmethod,
+                                 Symbol filename) {
+    const int errors_before_check = errors();
+    CheckReturnType(method, pmethod, filename);
+    if (errors() == errors_before_check) {
+        CheckNumberOfFormals(method, pmethod, filename);
+    }
+    if (errors() == errors_before_check) {
+        CheckFormalTypes(method, pmethod, filename);
+    }
+}
+
+void ClassTable::CheckReturnType(Method method, Method pmethod,
+                                 Symbol filename) {
+    if (method->GetReturnType() != pmethod->GetReturnType()) {
+        semant_error(filename, method)
+            << "In redefined method " << method->GetName() << ", return type "
+            << method->GetReturnType()
+            << " is different from original return type "
+            << pmethod->GetReturnType() << ".\n";
+    }
+}
+
+void ClassTable::CheckNumberOfFormals(Method method, Method pmethod,
+                                      Symbol filename) {
+    const Formals formals = method->GetFormals();
+    const Formals pformals = pmethod->GetFormals();
+    if (formals->len() != pformals->len()) {
+        semant_error(filename, method)
+            << "Incompatible number of formal parameters in redefined method "
+            << method->GetName() << ".\n";
+    }
+}
+
+void ClassTable::CheckFormalTypes(Method method, Method pmethod,
+                                  Symbol filename) {
+    const Formals formals = method->GetFormals();
+    const Formals pformals = pmethod->GetFormals();
+    for (int i = 0; formals->more(i) && pformals->more(i); i++) {
+        const Symbol formal_type = formals->nth(i)->GetDeclType();
+        const Symbol pformal_type = pformals->nth(i)->GetDeclType();
+        if (formal_type != pformal_type) {
+            semant_error(filename, method)
+                << "In redefined method " << method->GetName()
+                << ", parameter type " << formal_type
+                << " is different from original type " << pformal_type << '\n';
+        }
+    }
+}
+
 std::vector<Method> GetMethods(const Class_ clss) {
     std::vector<Method> methods;
     const Features fs = clss->GetFeatures();
@@ -495,84 +570,6 @@ std::vector<Class_> ClassTable::GetParents(const Class_ clss) const {
 
 bool IsMethod(const Feature f) {
     return dynamic_cast<Method>(f);
-}
-
-MethodRedefinitionChecker::MethodRedefinitionChecker(ClassTable *table)
-    : table_{table} {}
-
-/**
- * @note Errors should be reported in ascending order by the line number.
- */
-void MethodRedefinitionChecker::CheckNoMismatchRedefinedMethod() {
-    for (const auto [_, clss] : *table_) {
-        filename_ = clss->get_filename();
-        for (const Method method : GetMethods(clss)) {
-            method_ = method;
-            bool has_found_ancestor_method = false;
-            for (Symbol parent = clss->GetParentName();
-                 !has_found_ancestor_method && parent != No_class;
-                 parent = table_->at(parent)->GetParentName()) {
-                for (const Method pmethod : GetMethods(table_->at(parent))) {
-                    if (pmethod->GetName() == method->GetName()) {
-                        pmethod_ = pmethod;
-                        has_found_ancestor_method = true;
-                        CheckNoMismatch_();
-                        break;
-                    }
-                }
-            }
-        }
-    }
-}
-
-/*
- * When facing multiple errors on a single method, only one of them is reported.
- * The precedence is (1) return type (2) number of formal (3) formal type".
- */
-void MethodRedefinitionChecker::CheckNoMismatch_() {
-    const int errors_before_check = table_->errors();
-    CheckReturnType_();
-    if (table_->errors() == errors_before_check) {
-        CheckNumberOfFormals_();
-    }
-    if (table_->errors() == errors_before_check) {
-        CheckFormalTypes_();
-    }
-}
-
-void MethodRedefinitionChecker::CheckReturnType_() {
-    if (method_->GetReturnType() != pmethod_->GetReturnType()) {
-        table_->semant_error(filename_, method_)
-            << "In redefined method " << method_->GetName() << ", return type "
-            << method_->GetReturnType()
-            << " is different from original return type "
-            << pmethod_->GetReturnType() << ".\n";
-    }
-}
-
-void MethodRedefinitionChecker::CheckNumberOfFormals_() {
-    const Formals formals = method_->GetFormals();
-    const Formals pformals = pmethod_->GetFormals();
-    if (formals->len() != pformals->len()) {
-        table_->semant_error(filename_, method_)
-            << "Incompatible number of formal parameters in redefined method "
-            << method_->GetName() << ".\n";
-    }
-}
-
-void MethodRedefinitionChecker::CheckFormalTypes_() {
-    const Formals formals = method_->GetFormals();
-    const Formals pformals = pmethod_->GetFormals();
-    for (int i = 0; formals->more(i) && pformals->more(i); i++) {
-        const Symbol formal_type = formals->nth(i)->GetDeclType();
-        const Symbol pformal_type = pformals->nth(i)->GetDeclType();
-        if (formal_type != pformal_type) {
-            table_->semant_error(filename_, method_)
-                << "In redefined method " << method_->GetName()
-                << ", parameter type " << formal_type
-                << " is different from original type " << pformal_type << '\n';
-        }
-    }
 }
 
 /*   This is the entry point to the semantic checker.
