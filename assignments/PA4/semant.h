@@ -69,7 +69,6 @@ private:
    * Checks related to method.
    */
 
-  void CheckNoMismatchRedefinedMethod();
   /// @brief Checks whether the method as identical signature with the original
   /// method. Shows error message if not.
   /// @param method the redefined method to check
@@ -101,13 +100,15 @@ private:
   /// @brief Does the method-related checks.
   /// The checks are
   /// (1) no difference from original
-  /// (2) no formal named self
-  /// (3) no undefined formal type
-  /// (4) no multiply defined formal
-  /// (5) no undefined return type
+  /// (2) no multiply defined method is a single class
+  /// (3) no formal named self
+  /// (4) no undefined formal type
+  /// (5) no multiply defined formal
+  /// (6) no undefined return type
   /// Keep checking even though their are previous errors.
-  /// @note Method redefinition is checked first over all classes, then the
-  /// remain checks are done method by method.
+  /// @note Method redefinition is checked first along with the multiply
+  /// definition over all classes, then the remain checks are done method by
+  /// method.
   void CheckMethods();
   int errors() { return semant_errors; }
   ostream& semant_error();

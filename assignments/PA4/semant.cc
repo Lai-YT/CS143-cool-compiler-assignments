@@ -109,9 +109,32 @@ void ClassTable::CheckClasses() {
 }
 
 void ClassTable::CheckMethods() {
-    CheckNoMismatchRedefinedMethod();
-    for (int i = 0; classes->more(i); i = classes->next(i)) {
-        const Class_ clss = classes->nth(i);
+    for (const auto [_, clss] : *this) {
+        std::unordered_set<Symbol> defined_methods{};
+        for (const Method method : GetMethods(clss)) {
+            bool has_found_ancestor_method = false;
+            for (Symbol parent = clss->GetParentName();
+                 !has_found_ancestor_method && parent != No_class;
+                 parent = at(parent)->GetParentName()) {
+                for (const Method pmethod : GetMethods(at(parent))) {
+                    if (pmethod->GetName() == method->GetName()) {
+                        has_found_ancestor_method = true;
+                        CheckNoMismatch(method, pmethod, clss->get_filename());
+                    }
+                }
+            }
+            // Check no multiply defined method in a single class
+            if (defined_methods.find(method->GetName()) !=
+                defined_methods.cend()) {
+                semant_error(clss->get_filename(), method)
+                    << "Method " << method->GetName()
+                    << " is multiply defined.\n";
+            } else {
+                defined_methods.insert(method->GetName());
+            }
+        }
+    }
+    for (const auto [_, clss] : *this) {
         for (const Method method : GetMethods(clss)) {
             CheckNoFormalNamedSelf(method, clss->get_filename());
             CheckNoUndefinedFormalType(method, clss->get_filename());
@@ -422,27 +445,6 @@ void ClassTable::CheckHasMainMethod() {
         }
     }
     semant_error(main) << "No 'main' method in class " << Main << ".\n";
-}
-
-/**
- * @note Errors should be reported in ascending order by the line number.
- */
-void ClassTable::CheckNoMismatchRedefinedMethod() {
-    for (const auto [_, clss] : *this) {
-        for (const Method method : GetMethods(clss)) {
-            bool has_found_ancestor_method = false;
-            for (Symbol parent = clss->GetParentName();
-                 !has_found_ancestor_method && parent != No_class;
-                 parent = at(parent)->GetParentName()) {
-                for (const Method pmethod : GetMethods(at(parent))) {
-                    if (pmethod->GetName() == method->GetName()) {
-                        has_found_ancestor_method = true;
-                        CheckNoMismatch(method, pmethod, clss->get_filename());
-                    }
-                }
-            }
-        }
-    }
 }
 
 /*
