@@ -105,6 +105,7 @@ void ClassTable::CheckClasses() {
 
 void ClassTable::CheckMethods() {
     for (const auto [_, clss] : *this) {
+        CheckNoRedefinedAttr(clss);
         std::unordered_set<Symbol> defined_methods{};
         for (const Method method : GetMethods(clss)) {
             bool has_found_ancestor_method = false;
@@ -507,46 +508,19 @@ std::vector<Method> GetMethods(const Class_ clss) {
     return methods;
 }
 
-void ClassTable::CheckNoUndeclaredIdentifier() {
-    for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
-        Class_ clss = classes->nth(i);
-        Symbol name = clss->GetName();
-        auto features = clss->GetFeatures();
-        SymbolTable<Symbol, Class_> environment;
-        environment.enterscope();
-        // add the attributes of the current class
-        for (int j = features->first(); features->more(j);
-             j = features->next(j)) {
-            if (auto attr = dynamic_cast<attr_class *>(features->nth(j))) {
-                if (environment.probe(attr->GetName())) {
-                    semant_error(clss->get_filename(), attr)
-                        << "Attribute " << attr->GetName()
-                        << " is multiply defined in class.\n";
-                } else {
-                    environment.addid(attr->GetName(),
-                                      &at(attr->GetDeclType()));
-                }
+void ClassTable::CheckNoRedefinedAttr(Class_ c) {
+    std::unordered_set<Symbol> defined_attrs{};
+    Features features = c->GetFeatures();
+    for (int i = features->first(); features->more(i); i = features->next(i)) {
+        if (auto attr = dynamic_cast<attr_class *>(features->nth(i))) {
+            if (defined_attrs.find(attr->GetName()) != defined_attrs.cend()) {
+                semant_error(c->get_filename(), attr)
+                    << "Attribute " << attr->GetName()
+                    << " is multiply defined in class.\n";
+            } else {
+                defined_attrs.insert(attr->GetName());
             }
         }
-        // check each methods
-        for (const auto method : GetMethods(clss)) {
-            environment.enterscope();
-            Formals formals = method->GetFormals();
-            for (int i = formals->first(); formals->more(i);
-                 i = formals->next(i)) {
-                auto formal = formals->nth(i);
-                if (environment.probe(formal->GetName())) {
-                    semant_error(clss->get_filename(), method)
-                        << "Formal parameter " << formal->GetName()
-                        << " is multiply defined.\n";
-                } else {
-                    environment.addid(formal->GetName(),
-                                      &at(formal->GetDeclType()));
-                }
-            }
-            environment.exitscope();
-        }
-        environment.exitscope();
     }
 }
 
@@ -566,6 +540,11 @@ std::vector<Class_> ClassTable::GetParents(const Class_ clss) const {
 
 bool IsMethod(const Feature f) {
     return dynamic_cast<Method>(f);
+}
+
+static void CompilationHaltedWithErrors() {
+    cerr << "Compilation halted due to static semantic errors." << endl;
+    exit(1);
 }
 
 /*   This is the entry point to the semantic checker.
@@ -590,13 +569,14 @@ void program_class::semant() {
     /* some semantic analysis code may go here */
     classtable->CheckClasses();
     if (classtable->errors()) {
-        cerr << "Compilation halted due to static semantic errors." << endl;
-        exit(1);
+        CompilationHaltedWithErrors();
     }
 
     classtable->CheckMethods();
     if (classtable->errors()) {
-        cerr << "Compilation halted due to static semantic errors." << endl;
-        exit(1);
+        CompilationHaltedWithErrors();
     }
+
+
+    delete classtable;
 }

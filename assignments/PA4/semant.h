@@ -68,6 +68,7 @@ private:
    * Checks related to method.
    */
 
+  void CheckNoRedefinedAttr(Class_ c);
   /// @brief Checks whether the method as identical signature with the original
   /// method. Shows error message if not.
   /// @param method the redefined method to check
@@ -83,7 +84,6 @@ private:
   void CheckNoUndefinedReturnType(const Method method, const Symbol filename);
 
   Classes classes;
-  void CheckNoUndeclaredIdentifier();
 
  public:
   ClassTable(Classes);
@@ -98,17 +98,17 @@ private:
   void CheckClasses();
   /// @brief Does the method-related checks.
   /// The checks are
-  /// (1) no difference from original
-  /// (2) no multiply defined method is a single class
-  /// (3) has Main class and main method
-  /// (4) no formal named self
-  /// (5) no undefined formal type
-  /// (6) no multiply defined formal
-  /// (7) no undefined return type
+  /// (1) no multiply defined attribute
+  /// (2) no difference from original
+  /// (3) no multiply defined method is a single class
+  /// (4) has Main class and main method
+  /// (5) no formal named self
+  /// (6) no undefined formal type
+  /// (7) no multiply defined formal
+  /// (8) no undefined return type
   /// Keep checking even though their are previous errors.
-  /// @note Method redefinition is checked first along with the multiply
-  /// definition over all classes, then the remain checks are done method by
-  /// method.
+  /// @note (1) is checked first along with (2) and (3) over all classes, then
+  /// the remain checks are done method by method.
   void CheckMethods();
   int errors() { return semant_errors; }
   ostream& semant_error();
