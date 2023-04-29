@@ -22,12 +22,17 @@
 
 # Attribute
 
+- [ ] Check attribute redefinition (not expected)
 - [ ] Check if the declared type of attribute is defined (expected)
 - [ ] Check if the inferred type of initialization of attribute (if exists) conforms to its declared type (expected)
-Assign
+
+# Assign
+
 - [ ] Check if the identifier is declared (expected)
 - [ ] Check if the type of assigned expression conforms to declared type of identifier (expected)
-Dispatch
+
+# Dispatch
+
 - [ ] Check if the declared static dispatch type is defined (only for static dispatch, expected)
 - [ ] Check if the expression type is defined (expected)
 - [ ] Check if the expression type conforms to the declared static dispatch type (only for static dispatch, expected)
@@ -42,7 +47,9 @@ Dispatch
 # Case / Branch
 
 - [ ] Check if duplicate branch exists (not expected)
-Let
+
+# Let
+
 - [ ] Check if the declared type of identifier is defined (expected)
 - [ ] Check if the inferred type of initialization of identifier (if exists) conforms to its declared type (expected)
 
