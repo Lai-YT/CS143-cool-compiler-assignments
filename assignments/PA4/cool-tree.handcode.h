@@ -44,78 +44,86 @@ typedef Expressions_class *Expressions;
 typedef list_node<Case> Cases_class;
 typedef Cases_class *Cases;
 
-#define Program_EXTRAS                          \
-virtual void semant() = 0;			\
-virtual void dump_with_types(ostream&, int) = 0;
+class Visitor;
 
+#define Program_EXTRAS                  \
+    virtual void semant() = 0;          \
+    virtual void Accept(Visitor *) = 0; \
+    virtual void dump_with_types(ostream &, int) = 0;
 
+#define program_EXTRAS                              \
+    void semant();                                  \
+    Classes GetClasses() const { return classes; }; \
+    void Accept(Visitor *) override;                \
+    void dump_with_types(ostream &, int);
 
-#define program_EXTRAS                          \
-void semant();     				\
-void dump_with_types(ostream&, int);
+#define Class__EXTRAS                         \
+    virtual Symbol get_filename() = 0;        \
+    virtual Symbol GetParentName() const = 0; \
+    virtual Symbol GetName() const = 0;       \
+    virtual Features GetFeatures() const = 0; \
+    virtual void Accept(Visitor *){};         \
+    virtual void dump_with_types(ostream &, int) = 0;
 
-#define Class__EXTRAS                     \
-virtual Symbol get_filename() = 0;        \
-virtual Symbol GetParentName() const = 0; \
-virtual Symbol GetName() const = 0;       \
-virtual Features GetFeatures() const = 0; \
-virtual void dump_with_types(ostream &, int) = 0;
+#define class__EXTRAS                                 \
+    Symbol get_filename() { return filename; }        \
+    Symbol GetParentName() const { return parent; }   \
+    Symbol GetName() const { return name; }           \
+    Features GetFeatures() const { return features; } \
+    void Accept(Visitor *) override;                  \
+    void dump_with_types(ostream &, int);
 
-#define class__EXTRAS                             \
-Symbol get_filename() { return filename; }        \
-Symbol GetParentName() const { return parent; }   \
-Symbol GetName() const { return name; }           \
-Features GetFeatures() const { return features; } \
-void dump_with_types(ostream &, int);
+#define Feature_EXTRAS                  \
+    virtual Symbol GetName() const = 0; \
+    virtual void Accept(Visitor *){};   \
+    virtual void dump_with_types(ostream &, int) = 0;
 
-#define Feature_EXTRAS              \
-virtual Symbol GetName() const = 0; \
-virtual void dump_with_types(ostream&,int) = 0;
+#define Feature_SHARED_EXTRAS               \
+    Symbol GetName() const { return name; } \
+    void Accept(Visitor *) override;        \
+    void dump_with_types(ostream &, int);
 
-
-#define Feature_SHARED_EXTRAS           \
-Symbol GetName() const { return name; } \
-void dump_with_types(ostream&,int);
-
-
-
-#define method_EXTRAS \
-Symbol GetReturnType() const { return return_type; } \
-Formals GetFormals() const { return formals; }
-
+#define method_EXTRAS                                    \
+    Symbol GetReturnType() const { return return_type; } \
+		Expression GetExpr() const { return expr; }          \
+    Formals GetFormals() const { return formals; }
 
 #define attr_EXTRAS \
-Symbol GetDeclType() const { return type_decl; }
+    Symbol GetDeclType() const { return type_decl; } \
+		Expression GetInit() const { return init; }
 
-#define Formal_EXTRAS                   \
-virtual Symbol GetName() const = 0;     \
-virtual Symbol GetDeclType() const = 0; \
-virtual void dump_with_types(ostream &, int) = 0;
+#define Formal_EXTRAS                       \
+    virtual Symbol GetName() const = 0;     \
+    virtual Symbol GetDeclType() const = 0; \
+    virtual void dump_with_types(ostream &, int) = 0;
 
+#define formal_EXTRAS                                \
+    Symbol GetName() const { return name; }          \
+    Symbol GetDeclType() const { return type_decl; } \
+    void dump_with_types(ostream &, int);
 
-#define formal_EXTRAS                            \
-Symbol GetName() const { return name; }          \
-Symbol GetDeclType() const { return type_decl; } \
-void dump_with_types(ostream&,int);
+#define Case_EXTRAS                   \
+    virtual void Accept(Visitor *){}; \
+    virtual void dump_with_types(ostream &, int) = 0;
 
+#define branch_EXTRAS                \
+    void Accept(Visitor *) override; \
+    void dump_with_types(ostream &, int);
 
-#define Case_EXTRAS                             \
-virtual void dump_with_types(ostream& ,int) = 0;
+#define Expression_EXTRAS                             \
+    Symbol type;                                      \
+    Symbol get_type() { return type; }                \
+    Expression set_type(Symbol s) {                   \
+        type = s;                                     \
+        return this;                                  \
+    }                                                 \
+    Expression_class() { type = (Symbol)NULL; }       \
+    void dump_type(ostream &, int);                   \
+    virtual void dump_with_types(ostream &, int) = 0; \
+    virtual void Accept(Visitor *){};
 
-
-#define branch_EXTRAS                                   \
-void dump_with_types(ostream& ,int);
-
-
-#define Expression_EXTRAS                    \
-Symbol type;                                 \
-Symbol get_type() { return type; }           \
-Expression set_type(Symbol s) { type = s; return this; } \
-virtual void dump_with_types(ostream&,int) = 0;  \
-void dump_type(ostream&, int);               \
-Expression_class() { type = (Symbol) NULL; }
-
-#define Expression_SHARED_EXTRAS           \
-void dump_with_types(ostream&,int);
+#define Expression_SHARED_EXTRAS     \
+    void Accept(Visitor *) override; \
+    void dump_with_types(ostream &, int);
 
 #endif

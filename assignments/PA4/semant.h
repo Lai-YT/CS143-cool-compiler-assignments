@@ -39,8 +39,6 @@ private:
   std::unordered_set<Symbol> final_classes{};
   bool IsFinal(Symbol name) const;
   bool HasClass(Symbol name) const;
-  // Up until Object.
-  std::vector<Class_> GetParents(const Class_) const;
   /// @brief Almost all of the checks only have to be performed on user-defined
   /// classes (non-basic). This helper method serves such purpose.
   std::vector<Class_> GetUserDefinedClasses() const;
@@ -115,6 +113,8 @@ private:
   /// @note (1) is checked first along with (2) and (3) over all classes, then
   /// the remain checks are done method by method.
   void CheckMethods();
+  // Up until Object.
+  std::vector<Class_> GetParents(const Class_) const;
   int errors() { return semant_errors; }
   ostream& semant_error();
   ostream& semant_error(Class_ c);
@@ -123,5 +123,59 @@ private:
 
 bool IsMethod(const Feature f);
 std::vector<Method> GetMethods(const Class_);
+
+class Visitor {
+  /*
+   * Define the visit method for all nodes.
+   * They do nothing by default.
+   */
+ public:
+  virtual void VisitProgram(program_class *){};
+  virtual void VisitClass(class__class *){};
+  virtual void VisitAttr(attr_class *){};
+  virtual void VisitMethod(method_class *){};
+
+  /*
+   * Expressions
+   */
+
+  virtual void VisitBranch(branch_class *){};
+  virtual void VisitAssign(assign_class *){};
+  virtual void VisitCond(cond_class *){};
+  virtual void VisitStaticDispatch(static_dispatch_class *){};
+  virtual void VisitDispatch(dispatch_class *){};
+  virtual void VisitLoop(loop_class *){};
+  virtual void VisitTypcase(typcase_class *){};
+  virtual void VisitBlock(block_class *){};
+  virtual void VisitLet(let_class *){};
+  virtual void VisitNeg(neg_class *){};
+  virtual void VisitComp(comp_class *){};
+  virtual void VisitInt(int_const_class *){};
+  virtual void VisitBool(bool_const_class *){};
+  virtual void VisitString(string_const_class *){};
+  virtual void VisitNew(new__class *){};
+  virtual void VisitIsvoid(isvoid_class *){};
+  virtual void VisitObject(object_class *){};
+  virtual void VisitNoExpr(no_expr_class *){};
+
+  /*
+   * Arithmetic expressions
+   */
+
+  virtual void VisitPlus(plus_class *){};
+  virtual void VisitSub(sub_class *){};
+  virtual void VisitMul(mul_class *){};
+  virtual void VisitDivide(divide_class *){};
+
+  /*
+   * Comparison expressions
+   */
+
+  virtual void VisitEq(eq_class *){};
+  virtual void VisitLt(lt_class *){};
+  virtual void VisitLeq(leq_class *){};
+
+  virtual ~Visitor() = default;
+};
 
 #endif

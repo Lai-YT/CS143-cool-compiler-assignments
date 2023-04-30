@@ -4,6 +4,7 @@
 #include <symtab.h>
 #include <unordered_set>
 #include <vector>
+#include "cool-tree.h"
 #include "semant.h"
 #include "utilities.h"
 
@@ -544,6 +545,205 @@ void ClassTable::CheckNoRedefinedAttr(Class_ c) {
     }
 }
 
+// The method of class nodes are defined here to avoid circular including.
+
+void program_class::Accept(Visitor *visitor) {
+    visitor->VisitProgram(this);
+}
+
+void class__class::Accept(Visitor *visitor) {
+    visitor->VisitClass(this);
+}
+
+void method_class::Accept(Visitor *visitor) {
+    visitor->VisitMethod(this);
+}
+
+void attr_class::Accept(Visitor *visitor) {
+    visitor->VisitAttr(this);
+}
+
+void branch_class::Accept(Visitor *visitor) {
+    visitor->VisitBranch(this);
+}
+
+void assign_class::Accept(Visitor *visitor) {
+    visitor->VisitAssign(this);
+}
+
+void cond_class::Accept(Visitor *visitor) {
+    visitor->VisitCond(this);
+}
+
+void static_dispatch_class::Accept(Visitor *visitor) {
+    visitor->VisitStaticDispatch(this);
+}
+
+void dispatch_class::Accept(Visitor *visitor) {
+    visitor->VisitDispatch(this);
+}
+
+void loop_class::Accept(Visitor *visitor) {
+    visitor->VisitLoop(this);
+}
+
+void typcase_class::Accept(Visitor *visitor) {
+    visitor->VisitTypcase(this);
+}
+
+void block_class::Accept(Visitor *visitor) {
+    visitor->VisitBlock(this);
+}
+
+void let_class::Accept(Visitor *visitor) {
+    visitor->VisitLet(this);
+}
+
+void neg_class::Accept(Visitor *visitor) {
+    visitor->VisitNeg(this);
+}
+
+void comp_class::Accept(Visitor *visitor) {
+    visitor->VisitComp(this);
+}
+
+void int_const_class::Accept(Visitor *visitor) {
+    visitor->VisitInt(this);
+}
+
+void bool_const_class::Accept(Visitor *visitor) {
+    visitor->VisitBool(this);
+}
+
+void string_const_class::Accept(Visitor *visitor) {
+    visitor->VisitString(this);
+}
+
+void new__class::Accept(Visitor *visitor) {
+    visitor->VisitNew(this);
+}
+
+void object_class::Accept(Visitor *visitor) {
+    visitor->VisitObject(this);
+}
+
+void plus_class::Accept(Visitor *visitor) {
+    visitor->VisitPlus(this);
+}
+
+void sub_class::Accept(Visitor *visitor) {
+    visitor->VisitSub(this);
+}
+
+void mul_class::Accept(Visitor *visitor) {
+    visitor->VisitMul(this);
+}
+
+void divide_class::Accept(Visitor *visitor) {
+    visitor->VisitDivide(this);
+}
+
+void eq_class::Accept(Visitor *visitor) {
+    visitor->VisitEq(this);
+}
+
+void leq_class::Accept(Visitor *visitor) {
+    visitor->VisitLeq(this);
+}
+
+void lt_class::Accept(Visitor *visitor) {
+    visitor->VisitLt(this);
+}
+
+void isvoid_class::Accept(Visitor *visitor) {
+    visitor->VisitIsvoid(this);
+}
+
+void no_expr_class::Accept(Visitor *visitor) {
+    visitor->VisitNoExpr(this);
+}
+
+/// @brief Checks whether the type of expressions conform to the definitions,
+/// and sets the inferred types to the class tree.
+class TypeCheckVisitor : public Visitor {
+   public:
+    /// @param table The class table of the tree to be type checked.
+    /// @note Type checking on a ill-formed class tree causes unexpected errors.
+    TypeCheckVisitor(ClassTable *table) : table_{table} {}
+
+    void VisitProgram(program_class *program) {
+        Classes classes = program->GetClasses();
+        for (int i = 0; classes->more(i); i = classes->next(i)) {
+            curr_clss_ = classes->nth(i);
+            curr_clss_->Accept(this);
+        }
+    }
+
+    void VisitClass(class__class *clss) override {
+        Features features = clss->GetFeatures();
+        for (int i = 0; features->more(i); i = features->next(i)) {
+            features->nth(i)->Accept(this);
+        }
+    }
+
+    void VisitMethod(method_class *method) override {
+        method->GetExpr()->Accept(this);
+        if (!Conform_(method->GetExpr()->get_type(), method->GetReturnType())) {
+            table_->semant_error(curr_clss_->get_filename(), method)
+                << "Inferred return type " << method->GetExpr()->get_type()
+                << " of method " << method->GetName()
+                << " does not conform to declared return type "
+                << method->GetReturnType() << ".\n";
+        }
+    }
+
+    void VisitAttr(attr_class *attr) override {
+        attr->GetInit()->Accept(this);
+        if (!Conform_(attr->GetInit()->get_type(), attr->GetDeclType())) {
+            table_->semant_error(curr_clss_->get_filename(), attr)
+                << "Inferred type " << attr->GetInit()->get_type()
+                << " of initialization of attribute " << attr->GetName()
+                << " does not conform to declared type " << attr->GetDeclType()
+                << ".\n";
+        }
+    }
+
+    void VisitInt(int_const_class *int_const) override {
+        int_const->set_type(Int);
+    }
+
+    void VisitBool(bool_const_class *bool_const) override {
+        bool_const->set_type(Bool);
+    }
+
+    void VisitString(string_const_class *string_const) override {
+        string_const->set_type(Str);
+    }
+
+    void VisitNoExpr(no_expr_class* no_expr) override {
+        no_expr->set_type(No_type);
+    }
+
+   private:
+    ClassTable *table_;
+    Class_ curr_clss_ = nullptr;
+
+    /// @return true if t_prime conforms to t.
+    bool Conform_(Symbol t_prime, Symbol t) {
+        if (t_prime == No_type // No_type is a sub-type of any type
+            || t_prime == t) {
+            return true;
+        }
+        // t_prime should have t as one of its parents
+        for (auto const parent : table_->GetParents(table_->at(t_prime))) {
+            if (parent->GetName() == t) {
+                return true;
+            }
+        }
+        return false;
+    }
+};
+
 /*
  * Note that this function goes into infinite loop if contains circular
  * inheritance.
@@ -607,6 +807,11 @@ void program_class::semant() {
         CompilationHaltedWithErrors();
     }
 
+    TypeCheckVisitor visitor{classtable};
+    this->Accept(&visitor);
+    if (classtable->errors()) {
+        CompilationHaltedWithErrors();
+    }
 
     delete classtable;
 }

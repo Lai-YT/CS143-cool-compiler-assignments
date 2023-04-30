@@ -18,13 +18,13 @@
 - [x] Check formal parameter redefinition (not expected): [formals_with_same_name.cl](tests/method/formals_with_same_name.cl)
 - [x] Check if the declared type of formal parameter is defined (expected): [undefined_formal_type.cl](tests/method/undefined_formal_type.cl)
 - [x] Check if the return type is defined (expected): [undefined_return_type.cl](tests/method/undefined_return_type.cl)
-- [ ] Check if the inferred return type conforms to the declared return type (expected)
+- [x] Check if the inferred return type conforms to the declared return type (expected): [not_conform_return_type.cl](tests/not_conform_return_type.cl)
 
 # Attribute
 
 - [x] Check attribute redefinition (not expected): [redefined_attr.cl](tests/method/redefined_attr.cl)
 - [x] Check if the declared type of attribute is defined (expected): [undefined_attr_type.cl](tests/method/undefined_attr_type.cl)
-- [ ] Check if the inferred type of initialization of attribute (if exists) conforms to its declared type (expected)
+- [x] Check if the inferred type of initialization of attribute (if exists) conforms to its declared type (expected): [attr.cl](tests/attr.cl)
 
 # Assign
 
