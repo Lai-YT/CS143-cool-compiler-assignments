@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <symtab.h>
+#include <type_traits>
 #include <unordered_set>
 #include <vector>
 #include "cool-tree.h"
@@ -753,6 +754,22 @@ class TypeCheckVisitor : public Visitor {
             exprs->nth(exprs->len() - 1 /* last expr*/)->get_type());
     }
 
+    void VisitPlus(plus_class *plus) override {
+        CheckArithmeticHasIntArgs_(plus);
+    }
+
+    void VisitSub(sub_class *sub) override {
+        CheckArithmeticHasIntArgs_(sub);
+    }
+
+    void VisitMul(mul_class *mul) override {
+        CheckArithmeticHasIntArgs_(mul);
+    }
+
+    void VisitDivide(divide_class *divide) override {
+        CheckArithmeticHasIntArgs_(divide);
+    }
+
     void VisitComp(comp_class *comp) override {
         comp->GetExpr()->Accept(this);
         if (comp->GetExpr()->get_type() != Bool) {
@@ -838,6 +855,45 @@ class TypeCheckVisitor : public Visitor {
             }
         }
         return false;
+    }
+
+    /*
+     * We can't use polymorphism here because arithmetic classes doesn't
+     * share another base class between Expression_class.
+     * A workaround is to use template methods.
+     */
+
+    template <typename Arithmetic>
+    void CheckArithmeticHasIntArgs_(Arithmetic *arith) {
+        const char operator_ = GetArithmeticOperator_(arith);
+        arith->GetLeftOp()->Accept(this);
+        arith->GetRightOp()->Accept(this);
+        const Symbol left_op_type = arith->GetLeftOp()->get_type();
+        const Symbol right_op_type = arith->GetRightOp()->get_type();
+        if (left_op_type != Int || right_op_type != Int) {
+            table_->semant_error(curr_clss_->get_filename(), arith)
+                << "non-Int arguments: " << left_op_type << ' ' << operator_
+                << ' ' << right_op_type << '\n';
+        }
+        // recovery: we know that an Int is desired
+        arith->set_type(Int);
+    }
+
+    template <typename Arithmetic>
+    char GetArithmeticOperator_(Arithmetic *arith) {
+        if (std::is_same<Arithmetic, plus_class>::value) {
+            return '+';
+        }
+        if (std::is_same<Arithmetic, sub_class>::value) {
+            return '-';
+        }
+        if (std::is_same<Arithmetic, mul_class>::value) {
+            return '*';
+        }
+        if (std::is_same<Arithmetic, divide_class>::value) {
+            return '/';
+        }
+        assert(false);
     }
 };
 

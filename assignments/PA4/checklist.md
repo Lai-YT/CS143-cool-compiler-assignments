@@ -53,7 +53,11 @@
 - [ ] Check if the declared type of identifier is defined (expected)
 - [ ] Check if the inferred type of initialization of identifier (if exists) conforms to its declared type (expected)
 
-# Plus, Sub, Mul, Div, Neg, LT, LEQ (`+`, `-`, `*`, `/`, `~`, `<`, `<=`)
+# Plus, Sub, Mul, Div (`+`, `-`, `*`, `/`)
+
+- [x] Check if all arguments have type `Int` (expected): [arith.cl](tests/arith.cl)
+
+# Neg, Lt, Leq (`~`, `<`, `<=`)
 
 - [ ] Check if all arguments have type `Int` (expected)
 

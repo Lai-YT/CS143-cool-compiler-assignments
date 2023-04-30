@@ -133,6 +133,22 @@ class Visitor;
     void Accept(Visitor *) override; \
     void dump_with_types(ostream &, int);
 
+#define plus_EXTRAS                             \
+    Expression GetLeftOp() const { return e1; } \
+    Expression GetRightOp() const { return e2; }
+
+#define sub_EXTRAS                              \
+    Expression GetLeftOp() const { return e1; } \
+    Expression GetRightOp() const { return e2; }
+
+#define mul_EXTRAS                              \
+    Expression GetLeftOp() const { return e1; } \
+    Expression GetRightOp() const { return e2; }
+
+#define divide_EXTRAS                           \
+    Expression GetLeftOp() const { return e1; } \
+    Expression GetRightOp() const { return e2; }
+
 #define eq_EXTRAS                                \
     Expression GetLhsExpr() const { return e1; } \
     Expression GetRhsExpr() const { return e2; }
