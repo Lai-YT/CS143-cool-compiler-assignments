@@ -764,6 +764,18 @@ class TypeCheckVisitor : public Visitor {
         comp->set_type(Bool);
     }
 
+    void VisitNew(new__class *new_) override {
+        if (!table_->HasClass(new_->GetName())) {
+            table_->semant_error(curr_clss_->get_filename(), new_)
+                << "'new' used with undefined class " << new_->GetName()
+                << ".\n";
+            // recovery: simply allow cascading errors
+            new_->set_type(Object);
+        } else {
+            new_->set_type(new_->GetName());
+        }
+    }
+
     void VisitInt(int_const_class *int_const) override {
         int_const->set_type(Int);
     }

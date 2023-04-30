@@ -38,7 +38,6 @@ private:
   bool IsBasic(Symbol name) const;
   std::unordered_set<Symbol> final_classes{};
   bool IsFinal(Symbol name) const;
-  bool HasClass(Symbol name) const;
   /// @brief Almost all of the checks only have to be performed on user-defined
   /// classes (non-basic). This helper method serves such purpose.
   std::vector<Class_> GetUserDefinedClasses() const;
@@ -115,6 +114,7 @@ private:
   void CheckMethods();
   // Up until Object.
   std::vector<Class_> GetParents(const Class_) const;
+  bool HasClass(Symbol name) const;
   int errors() { return semant_errors; }
   ostream& semant_error();
   ostream& semant_error(Class_ c);

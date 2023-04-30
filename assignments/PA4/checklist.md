@@ -67,7 +67,7 @@
 
 # New
 
-- [ ] Check if `new` is used with undefined class (not expected)
+- [x] Check if `new` is used with undefined class (not expected): [new.cl](tests/new.cl)
 
 # Object
 

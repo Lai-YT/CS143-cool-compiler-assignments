@@ -133,6 +133,9 @@ class Visitor;
     void Accept(Visitor *) override; \
     void dump_with_types(ostream &, int);
 
+#define new__EXTRAS \
+    Symbol GetName() const { return type_name; }
+
 #define block_EXTRAS \
     Expressions GetExpressions() const { return body; }
 
