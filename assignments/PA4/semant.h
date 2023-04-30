@@ -41,6 +41,9 @@ private:
   bool HasClass(Symbol name) const;
   // Up until Object.
   std::vector<Class_> GetParents(const Class_) const;
+  /// @brief Almost all of the checks only have to be performed on user-defined
+  /// classes (non-basic). This helper method serves such purpose.
+  std::vector<Class_> GetUserDefinedClasses() const;
 
   /*
    * Checks done in the first pass.

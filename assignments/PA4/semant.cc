@@ -104,7 +104,7 @@ void ClassTable::CheckClasses() {
 }
 
 void ClassTable::CheckMethods() {
-    for (const auto [_, clss] : *this) {
+    for (const Class_ clss : GetUserDefinedClasses()) {
         CheckNoRedefinedAttr(clss);
         std::unordered_set<Symbol> defined_methods{};
         for (const Method method : GetMethods(clss)) {
@@ -131,10 +131,7 @@ void ClassTable::CheckMethods() {
         }
     }
     CheckHasMainClassAndMainMethod();
-    for (const auto [_, clss] : *this) {
-        if (IsBasic(clss->GetName())) {
-            continue;
-        }
+    for (const Class_ clss : GetUserDefinedClasses()) {
         CheckNoUndefinedAttrType(clss);
         for (const Method method : GetMethods(clss)) {
             CheckNoFormalNamedSelf(method, clss->get_filename());
@@ -390,8 +387,10 @@ ostream &ClassTable::semant_error() {
  * Errors should be reported in descending order by the line number.
  */
 void ClassTable::CheckNoInheritanceFromFinal() {
-    for (auto iter = rbegin(); iter != rend(); iter++) {
-        const auto clss = iter->second;
+    auto user_defined_classes = GetUserDefinedClasses();
+    for (auto iter = user_defined_classes.rbegin();
+         iter != user_defined_classes.rend(); iter++) {
+        Class_ clss = *iter;
         if (IsFinal(clss->GetParentName())) {
             ShowInheritanceFromFinalError(clss);
         }
@@ -407,8 +406,10 @@ void ClassTable::ShowInheritanceFromFinalError(Class_ c) {
  * Errors should be reported in descending order by the line number.
  */
 void ClassTable::CheckNoUndeclaredBaseClass() {
-    for (auto iter = rbegin(); iter != rend(); iter++) {
-        const auto clss = iter->second;
+    auto user_defined_classes = GetUserDefinedClasses();
+    for (auto iter = user_defined_classes.rbegin();
+         iter != user_defined_classes.rend(); iter++) {
+        Class_ clss = *iter;
         const Symbol pname = clss->GetParentName();
         if (!HasClass(pname) && pname != No_class && pname != SELF_TYPE) {
             ShowUndeclaredBaseClassError(clss);
@@ -427,11 +428,13 @@ void ClassTable::ShowUndeclaredBaseClassError(Class_ c) {
  * Throws Error if there's any circular inheritance.
  */
 void ClassTable::CheckNoCircularInheritance() {
-    for (auto iter = rbegin(); iter != rend(); iter++) {
-        const auto [name, clss] = *iter;
+    auto user_defined_classes = GetUserDefinedClasses();
+    for (auto iter = user_defined_classes.rbegin();
+         iter != user_defined_classes.rend(); iter++) {
+        Class_ clss = *iter;
         for (Symbol pname = clss->GetParentName(); pname != No_class;
              pname = at(pname)->GetParentName()) {
-            if (pname == name) {
+            if (pname == clss->GetName()) {
                 ShowCircularInheritanceError(clss);
                 break;
             }
@@ -553,6 +556,16 @@ std::vector<Class_> ClassTable::GetParents(const Class_ clss) const {
         parent = at(parent)->GetParentName();
     }
     return parents;
+}
+
+std::vector<Class_> ClassTable::GetUserDefinedClasses() const {
+    std::vector<Class_> classes{};
+    for (auto [name, clss] : *this) {
+        if (!IsBasic(name)) {
+            classes.push_back(clss);
+        }
+    }
+    return classes;
 }
 
 bool IsMethod(const Feature f) {
