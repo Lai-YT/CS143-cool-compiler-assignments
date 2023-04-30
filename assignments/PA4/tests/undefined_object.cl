@@ -13,8 +13,7 @@ Class A {
 };
 
 Class B {
-   method() : Int { {
-      undefinedObject;
-      0;
-   } };
+   method() : Int {
+      undefinedObject
+   };
 };

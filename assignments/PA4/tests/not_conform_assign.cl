@@ -3,8 +3,9 @@ class Main {
 
    i : Int;
 
-   method() : Int { {
-      i <- "should be an integer";
-      0;
-   } };
+   -- the type of the assignment is the type of the expression on the right
+   -- hand side
+   method() : Int {
+      i <- "should be an integer"
+   };
 };

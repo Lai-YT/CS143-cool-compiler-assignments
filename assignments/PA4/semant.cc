@@ -728,6 +728,9 @@ class TypeCheckVisitor : public Visitor {
                     << ".\n";
             }
         }
+        // the type of the assignment is the type of the expression on the right
+        // hand side, no matter what happens on the left hand side.
+        assign->set_type(assign->GetExpr()->get_type());
     }
 
     void VisitAttr(attr_class *attr) override {
@@ -767,6 +770,8 @@ class TypeCheckVisitor : public Visitor {
         if (!object_type) {
             table_->semant_error(curr_clss_->get_filename(), object)
                 << "Undeclared identifier " << object->GetName() << ".\n";
+            // recovery: simply allow cascading errors
+            object->set_type(Object);
         } else {
             object->set_type(*object_type);
         }
