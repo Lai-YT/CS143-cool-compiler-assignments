@@ -114,6 +114,9 @@ class Visitor;
     void Accept(Visitor *) override; \
     void dump_with_types(ostream &, int);
 
+#define comp_EXTRAS \
+    Expression GetExpr() const { return e1; };
+
 #define Expression_EXTRAS                             \
     Symbol type;                                      \
     Symbol get_type() { return type; }                \

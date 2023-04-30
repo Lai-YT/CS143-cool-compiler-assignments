@@ -753,6 +753,17 @@ class TypeCheckVisitor : public Visitor {
             exprs->nth(exprs->len() - 1 /* last expr*/)->get_type());
     }
 
+    void VisitComp(comp_class *comp) override {
+        comp->GetExpr()->Accept(this);
+        if (comp->GetExpr()->get_type() != Bool) {
+            table_->semant_error(curr_clss_->get_filename(), comp)
+                << "Argument of 'not' has type " << comp->GetExpr()->get_type()
+                << " instead of Bool.\n";
+        }
+        // recovery: we know that a Bool is desired
+        comp->set_type(Bool);
+    }
+
     void VisitInt(int_const_class *int_const) override {
         int_const->set_type(Int);
     }

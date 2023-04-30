@@ -63,7 +63,7 @@
 
 # Comp (not)
 
-- [ ] Check if argument has type `Bool` (expected)
+- [x] Check if argument has type `Bool` (expected): [comp.cl](tests/comp.cl)
 
 # New
 
