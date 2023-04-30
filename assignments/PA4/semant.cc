@@ -680,13 +680,26 @@ class TypeCheckVisitor : public Visitor {
     }
 
     void VisitClass(class__class *clss) override {
+        obj_env.enterscope();
         Features features = clss->GetFeatures();
+        for (int i = 0; features->more(i); i = features->next(i)) {
+            if (auto attr = dynamic_cast<attr_class *>(features->nth(i))) {
+                obj_env.addid(attr->GetName(), new Symbol(attr->GetDeclType()));
+            }
+        }
         for (int i = 0; features->more(i); i = features->next(i)) {
             features->nth(i)->Accept(this);
         }
+        obj_env.exitscope();
     }
 
     void VisitMethod(method_class *method) override {
+        obj_env.enterscope();
+        Formals formals = method->GetFormals();
+        for (int i = 0; formals->more(i); i = formals->next(i)) {
+            obj_env.addid(formals->nth(i)->GetName(),
+                          new Symbol(formals->nth(i)->GetDeclType()));
+        }
         method->GetExpr()->Accept(this);
         if (!Conform_(method->GetExpr()->get_type(), method->GetReturnType())) {
             table_->semant_error(curr_clss_->get_filename(), method)
@@ -694,6 +707,26 @@ class TypeCheckVisitor : public Visitor {
                 << " of method " << method->GetName()
                 << " does not conform to declared return type "
                 << method->GetReturnType() << ".\n";
+        }
+        obj_env.exitscope();
+    }
+
+    void VisitAssign(assign_class *assign) override {
+        assign->GetExpr()->Accept(this);
+        Symbol *id_type = obj_env.lookup(assign->GetName());
+        if (!id_type) {
+            table_->semant_error(curr_clss_->get_filename(), assign)
+                << "Assignment to undeclared variable " << assign->GetName()
+                << ".\n";
+        } else {
+            if (!Conform_(assign->GetExpr()->get_type(), *id_type)) {
+                table_->semant_error(curr_clss_->get_filename(), assign)
+                    << "Type " << assign->GetExpr()->get_type()
+                    << " of assigned expression does not conform to declared "
+                       "type "
+                    << *id_type << " of identifier " << assign->GetName()
+                    << ".\n";
+            }
         }
     }
 
@@ -708,6 +741,15 @@ class TypeCheckVisitor : public Visitor {
         }
     }
 
+    void VisitBlock(block_class *block) override {
+        Expressions exprs = block->GetExpressions();
+        for (int i = exprs->first(); exprs->more(i); i = exprs->next(i)) {
+            exprs->nth(i)->Accept(this);
+        }
+        block->set_type(
+            exprs->nth(exprs->len() - 1 /* last expr*/)->get_type());
+    }
+
     void VisitInt(int_const_class *int_const) override {
         int_const->set_type(Int);
     }
@@ -720,17 +762,28 @@ class TypeCheckVisitor : public Visitor {
         string_const->set_type(Str);
     }
 
-    void VisitNoExpr(no_expr_class* no_expr) override {
+    void VisitObject(object_class *object) override {
+        Symbol *object_type = obj_env.lookup(object->GetName());
+        if (!object_type) {
+            table_->semant_error(curr_clss_->get_filename(), object)
+                << "Undeclared identifier " << object->GetName() << ".\n";
+        } else {
+            object->set_type(*object_type);
+        }
+    }
+
+    void VisitNoExpr(no_expr_class *no_expr) override {
         no_expr->set_type(No_type);
     }
 
    private:
     ClassTable *table_;
+    SymbolTable<Symbol /* name */, Symbol /* type */> obj_env;
     Class_ curr_clss_ = nullptr;
 
     /// @return true if t_prime conforms to t.
     bool Conform_(Symbol t_prime, Symbol t) {
-        if (t_prime == No_type // No_type is a sub-type of any type
+        if (t_prime == No_type  // No_type is a sub-type of any type
             || t_prime == t) {
             return true;
         }

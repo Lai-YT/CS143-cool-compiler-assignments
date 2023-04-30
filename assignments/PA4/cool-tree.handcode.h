@@ -102,6 +102,10 @@ class Visitor;
     Symbol GetDeclType() const { return type_decl; } \
     void dump_with_types(ostream &, int);
 
+#define assign_EXTRAS                       \
+    Symbol GetName() const { return name; } \
+    Expression GetExpr() const { return expr; }
+
 #define Case_EXTRAS                   \
     virtual void Accept(Visitor *){}; \
     virtual void dump_with_types(ostream &, int) = 0;
@@ -125,5 +129,11 @@ class Visitor;
 #define Expression_SHARED_EXTRAS     \
     void Accept(Visitor *) override; \
     void dump_with_types(ostream &, int);
+
+#define block_EXTRAS \
+    Expressions GetExpressions() const { return body; }
+
+#define object_EXTRAS \
+    Symbol GetName() const { return name; }
 
 #endif

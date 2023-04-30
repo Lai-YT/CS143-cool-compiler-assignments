@@ -28,8 +28,8 @@
 
 # Assign
 
-- [ ] Check if the identifier is declared (expected)
-- [ ] Check if the type of assigned expression conforms to declared type of identifier (expected)
+- [x] Check if the identifier is declared (expected): [undefined_assign_identifier.cl](tests/undefined_assign_identifier.cl)
+- [x] Check if the type of assigned expression conforms to declared type of identifier (expected): [not_conform_assign.cl](tests/not_conform_assign.cl)
 
 # Dispatch
 
@@ -71,4 +71,4 @@
 
 # Object
 
-- [ ] Check if identifier is declared (expected)
+- [x] Check if identifier is declared (expected): [undefined_object.cl](tests/undefined_object.cl)
