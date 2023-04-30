@@ -132,11 +132,28 @@ void ClassTable::CheckMethods() {
     }
     CheckHasMainClassAndMainMethod();
     for (const auto [_, clss] : *this) {
+        if (IsBasic(clss->GetName())) {
+            continue;
+        }
+        CheckNoUndefinedAttrType(clss);
         for (const Method method : GetMethods(clss)) {
             CheckNoFormalNamedSelf(method, clss->get_filename());
             CheckNoUndefinedFormalType(method, clss->get_filename());
             CheckNoRedefinedFormal(method, clss->get_filename());
             CheckNoUndefinedReturnType(method, clss->get_filename());
+        }
+    }
+}
+
+void ClassTable::CheckNoUndefinedAttrType(Class_ c) {
+    Features features = c->GetFeatures();
+    for (int i = features->first(); features->more(i); i = features->next(i)) {
+        if (auto attr = dynamic_cast<attr_class *>(features->nth(i))) {
+            if (find(attr->GetDeclType()) == cend()) {
+                semant_error(c->get_filename(), attr)
+                    << "Class " << attr->GetDeclType() << " of attribute "
+                    << attr->GetName() << " is undefined.\n";
+            }
         }
     }
 }

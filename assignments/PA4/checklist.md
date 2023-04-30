@@ -23,7 +23,7 @@
 # Attribute
 
 - [x] Check attribute redefinition (not expected): [redefined_attr.cl](tests/method/redefined_attr.cl)
-- [ ] Check if the declared type of attribute is defined (expected)
+- [x] Check if the declared type of attribute is defined (expected): [undefined_attr_type.cl](tests/method/undefined_attr_type.cl)
 - [ ] Check if the inferred type of initialization of attribute (if exists) conforms to its declared type (expected)
 
 # Assign

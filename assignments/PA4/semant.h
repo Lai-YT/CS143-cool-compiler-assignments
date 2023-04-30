@@ -78,6 +78,7 @@ private:
   void CheckReturnType(Method method, Method pmethod, Symbol filename);
   void CheckNumberOfFormals(Method method, Method pmethod, Symbol filename);
   void CheckFormalTypes(Method method, Method pmethod, Symbol filename);
+  void CheckNoUndefinedAttrType(Class_ c);
   void CheckNoFormalNamedSelf(const Method method, const Symbol filename);
   void CheckNoUndefinedFormalType(const Method method, const Symbol filename);
   void CheckNoRedefinedFormal(const Method method, const Symbol filename);
@@ -102,10 +103,11 @@ private:
   /// (2) no difference from original
   /// (3) no multiply defined method is a single class
   /// (4) has Main class and main method
-  /// (5) no formal named self
-  /// (6) no undefined formal type
-  /// (7) no multiply defined formal
-  /// (8) no undefined return type
+  /// (5) no undefined attribute type
+  /// (6) no formal named self
+  /// (7) no undefined formal type
+  /// (8) no multiply defined formal
+  /// (9) no undefined return type
   /// Keep checking even though their are previous errors.
   /// @note (1) is checked first along with (2) and (3) over all classes, then
   /// the remain checks are done method by method.
