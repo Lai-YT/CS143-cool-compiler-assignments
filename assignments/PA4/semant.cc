@@ -764,6 +764,22 @@ class TypeCheckVisitor : public Visitor {
         comp->set_type(Bool);
     }
 
+    void VisitEq(eq_class *eq) override {
+        eq->GetLhsExpr()->Accept(this);
+        eq->GetRhsExpr()->Accept(this);
+        // Any types may be freely compared except Int, String and Bool, which
+        // may only be compared with objects of the same type.
+        Symbol lhs_type = eq->GetLhsExpr()->get_type();
+        Symbol rhs_type = eq->GetRhsExpr()->get_type();
+        if ((lhs_type == Int || lhs_type == Str || lhs_type == Bool)
+            && lhs_type != rhs_type) {
+            table_->semant_error(curr_clss_->get_filename(), eq)
+                << "Illegal comparison with a basic type.\n";
+        }
+        // recovery: we know that a Bool is desired
+        eq->set_type(Bool);
+    }
+
     void VisitNew(new__class *new_) override {
         if (!table_->HasClass(new_->GetName())) {
             table_->semant_error(curr_clss_->get_filename(), new_)

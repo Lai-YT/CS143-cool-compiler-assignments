@@ -133,6 +133,10 @@ class Visitor;
     void Accept(Visitor *) override; \
     void dump_with_types(ostream &, int);
 
+#define eq_EXTRAS                                \
+    Expression GetLhsExpr() const { return e1; } \
+    Expression GetRhsExpr() const { return e2; }
+
 #define new__EXTRAS \
     Symbol GetName() const { return type_name; }
 

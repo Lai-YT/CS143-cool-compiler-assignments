@@ -59,7 +59,7 @@
 
 # EQ (`=`)
 
-- [ ] Check if one argument has static type `Int`,  `Bool`, or `String`, then the other must have the same static type
+- [x] Check if one argument has static type `Int`,  `Bool`, or `String`, then the other must have the same static type: [eq.cl](tests/eq.cl)
 
 # Comp (not)
 
