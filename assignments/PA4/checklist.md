@@ -43,7 +43,7 @@
 
 # Condition & Loop
 
-- [ ] Check if the condition has type `Bool` (expected): [if.cl](tests/if.cl)
+- [x] Check if the condition has type `Bool` (expected): [if.cl](tests/if.cl), [while.cl](tests/while.cl)
 
 # Case / Branch
 

@@ -810,6 +810,18 @@ class TypeCheckVisitor : public Visitor {
                                  cond->GetElseExpr()->get_type()));
     }
 
+    void VisitLoop(loop_class *loop) override {
+        loop->GetPredicate()->Accept(this);
+        if (loop->GetPredicate()->get_type() != Bool) {
+            table_->semant_error(curr_clss_->get_filename(), loop)
+                << "Loop condition does not have type Bool.\n";
+        }
+        loop->GetBody()->Accept(this);
+        // the type of the entire loop is always Object since it may not be
+        // evaluated even once when the predicate is false at the first check
+        loop->set_type(Object);
+    }
+
     void VisitPlus(plus_class *plus) override {
         CheckArithmeticHasIntArgs_(plus);
     }

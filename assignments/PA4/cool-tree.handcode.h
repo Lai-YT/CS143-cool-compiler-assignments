@@ -144,6 +144,10 @@ class Visitor;
     Expression GetThenExpr() const { return then_exp; } \
     Expression GetElseExpr() const { return else_exp; }
 
+#define loop_EXTRAS                                  \
+    Expression GetPredicate() const { return pred; } \
+    Expression GetBody() const { return body; }
+
 #define plus_EXTRAS                             \
     Expression GetLeftOp() const { return e1; } \
     Expression GetRightOp() const { return e2; }
