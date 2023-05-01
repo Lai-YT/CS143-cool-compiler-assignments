@@ -148,7 +148,8 @@ void ClassTable::CheckNoUndefinedAttrType(Class_ c) {
     Features features = c->GetFeatures();
     for (int i = features->first(); features->more(i); i = features->next(i)) {
         if (auto attr = dynamic_cast<attr_class *>(features->nth(i))) {
-            if (find(attr->GetDeclType()) == cend()) {
+            if (find(attr->GetDeclType()) == cend()
+                && attr->GetDeclType() != SELF_TYPE) {
                 semant_error(c->get_filename(), attr)
                     << "Class " << attr->GetDeclType() << " of attribute "
                     << attr->GetName() << " is undefined.\n";
@@ -172,7 +173,10 @@ void ClassTable::CheckNoUndefinedFormalType(const Method method, const Symbol fi
     const Formals formals = method->GetFormals();
     for (int i = 0; formals->more(i); i = formals->next(i)) {
         const Formal formal = formals->nth(i);
-        if (!HasClass(formal->GetDeclType())) {
+        if (formal->GetDeclType() == SELF_TYPE) {
+            semant_error(filename, method)
+                << "Formal parameter formal cannot have type SELF_TYPE.\n";
+        } else if (!HasClass(formal->GetDeclType())) {
             semant_error(filename, method)
                 << "Class " << formal->GetDeclType() << " of formal parameter "
                 << formal->GetName() << " is undefined.\n";
@@ -760,7 +764,8 @@ class TypeCheckVisitor : public Visitor {
          */
         let->GetInit()->Accept(this);
         bool is_unknown_type = false;
-        if (!table_->HasClass(let->GetIdDeclType())) {
+        if (!table_->HasClass(let->GetIdDeclType())
+            && let->GetIdDeclType() != SELF_TYPE) {
             is_unknown_type = true;
             table_->semant_error(curr_clss_->get_filename(), let)
                 << "Class " << let->GetIdDeclType()
@@ -922,10 +927,28 @@ class TypeCheckVisitor : public Visitor {
 
     /// @return true if t_prime conforms to t.
     bool Conform_(Symbol t_prime, Symbol t) {
-        if (t_prime == No_type  // No_type is a sub-type of any type
-            || t_prime == t) {
+        if (t_prime == t) {
             return true;
         }
+        // No_type is a sub-type of any type
+        if (t_prime == No_type) {
+            return true;
+        }
+        if (t == SELF_TYPE) {
+            // (1) t_prime is current class
+            //      SELF_TYPE <= current class, possible downcast
+            // (2) t_prime is other type
+            //      (can't be SELF_TYPE since it's already checked)
+            return false;
+        }
+        if (t_prime == SELF_TYPE) {
+            if (t == curr_clss_->GetName()) {
+                return true;
+            }
+            // SELF_TYPE indicates the current class
+            t_prime = curr_clss_->GetName();
+        }
+
         // t_prime should have t as one of its parents
         for (auto const parent : table_->GetParents(table_->at(t_prime))) {
             if (parent->GetName() == t) {

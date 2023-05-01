@@ -17,13 +17,14 @@
 - [x] Check if `self` is the name of some formal parameter (not expected): [self_as_formal.cl](tests/method/self_as_formal.cl)
 - [x] Check formal parameter redefinition (not expected): [formals_with_same_name.cl](tests/method/formals_with_same_name.cl)
 - [x] Check if the declared type of formal parameter is defined (expected): [undefined_formal_type.cl](tests/method/undefined_formal_type.cl)
-- [x] Check if the return type is defined (expected): [undefined_return_type.cl](tests/method/undefined_return_type.cl)
+- [x] Check if the declared type of formal parameter is SELF_TYPE (not expected): [no_formal_type_SELF_TYPE.cl](tests/no_formal_type_SELF_TYPE.cl)
+- [x] Check if the return type is defined or is SELF_TYPE (expected): [undefined_return_type.cl](tests/method/undefined_return_type.cl)
 - [x] Check if the inferred return type conforms to the declared return type (expected): [not_conform_return_type.cl](tests/not_conform_return_type.cl)
 
 # Attribute
 
 - [x] Check attribute redefinition (not expected): [redefined_attr.cl](tests/method/redefined_attr.cl)
-- [x] Check if the declared type of attribute is defined (expected): [undefined_attr_type.cl](tests/method/undefined_attr_type.cl)
+- [x] Check if the declared type of attribute is defined or is SELF_TYPE (expected): [undefined_attr_type.cl](tests/method/undefined_attr_type.cl), [conform_SELF_TYPE.cl](tests/conform_SELF_TYPE.cl)
 - [x] Check if the inferred type of initialization of attribute (if exists) conforms to its declared type (expected): [attr.cl](tests/attr.cl)
 
 # Assign
@@ -50,7 +51,7 @@
 
 # Let
 
-- [x] Check if the declared type of identifier is defined (expected): [undefined_let_id_type.cl](tests/undefined_let_id_type.cl)
+- [x] Check if the declared type of identifier is defined or is SELF_TYPE (expected): [undefined_let_id_type.cl](tests/undefined_let_id_type.cl), [let_id_with_SELF_TYPE.cl](tests/let_id_with_SELF_TYPE.cl)
 - [x] Check if the inferred type of initialization of identifier (if exists) conforms to its declared type (expected): [not_conform_let_id_type.cl](tests/not_conform_let_id_type.cl)
 
 # Plus, Sub, Mul, Div (`+`, `-`, `*`, `/`)

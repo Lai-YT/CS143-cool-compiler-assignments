@@ -8,4 +8,9 @@ class Main {
    method2() : UnknownType {
       0
    };
+
+   -- SELF_TYPE is valid
+   method3() : SELF_TYPE {
+      self
+   };
 };
