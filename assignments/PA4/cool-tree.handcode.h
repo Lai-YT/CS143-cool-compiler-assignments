@@ -149,6 +149,17 @@ class Visitor;
     Expression GetLeftOp() const { return e1; } \
     Expression GetRightOp() const { return e2; }
 
+#define neg_EXTRAS \
+    Expression GetExpr() const { return e1; }
+
+#define leq_EXTRAS                              \
+    Expression GetLeftOp() const { return e1; } \
+    Expression GetRightOp() const { return e2; }
+
+#define lt_EXTRAS                               \
+    Expression GetLeftOp() const { return e1; } \
+    Expression GetRightOp() const { return e2; }
+
 #define eq_EXTRAS                                \
     Expression GetLhsExpr() const { return e1; } \
     Expression GetRhsExpr() const { return e2; }

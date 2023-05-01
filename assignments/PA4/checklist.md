@@ -59,7 +59,7 @@
 
 # Neg, Lt, Leq (`~`, `<`, `<=`)
 
-- [ ] Check if all arguments have type `Int` (expected)
+- [x] Check if all arguments have type `Int` (expected): [neg.cl](tests/neg.cl), [comparison.cl](tests/comparison.cl)
 
 # EQ (`=`)
 

@@ -781,6 +781,45 @@ class TypeCheckVisitor : public Visitor {
         comp->set_type(Bool);
     }
 
+    void VisitNeg(neg_class *neg) override {
+        neg->GetExpr()->Accept(this);
+        if (neg->GetExpr()->get_type() != Int) {
+            table_->semant_error(curr_clss_->get_filename(), neg)
+                << "Argument of '~' has type " << neg->GetExpr()->get_type()
+                << " instead of Int.\n";
+        }
+        // recovery: we know that an Int is desired
+        neg->set_type(Int);
+    }
+
+    void VisitLeq(leq_class *leq) override {
+        leq->GetLeftOp()->Accept(this);
+        leq->GetRightOp()->Accept(this);
+        const Symbol left_op_type = leq->GetLeftOp()->get_type();
+        const Symbol right_op_type = leq->GetRightOp()->get_type();
+        if (left_op_type != Int || right_op_type != Int) {
+            table_->semant_error(curr_clss_->get_filename(), leq)
+                << "non-Int arguments: " << left_op_type
+                << " <= " << right_op_type << "\n";
+        }
+        // recovery: we know that a Bool is desired
+        leq->set_type(Bool);
+    }
+
+    void VisitLt(lt_class *lt) override {
+        lt->GetLeftOp()->Accept(this);
+        lt->GetRightOp()->Accept(this);
+        const Symbol left_op_type = lt->GetLeftOp()->get_type();
+        const Symbol right_op_type = lt->GetRightOp()->get_type();
+        if (left_op_type != Int || right_op_type != Int) {
+            table_->semant_error(curr_clss_->get_filename(), lt)
+                << "non-Int arguments: " << left_op_type << " < "
+                << right_op_type << "\n";
+        }
+        // recovery: we know that a Bool is desired
+        lt->set_type(Bool);
+    }
+
     void VisitEq(eq_class *eq) override {
         eq->GetLhsExpr()->Accept(this);
         eq->GetRhsExpr()->Accept(this);
