@@ -754,6 +754,45 @@ class TypeCheckVisitor : public Visitor {
             exprs->nth(exprs->len() - 1 /* last expr*/)->get_type());
     }
 
+    void VisitLet(let_class *let) override {
+        /*
+         * init is type checked in an environment without a new definition
+         */
+        let->GetInit()->Accept(this);
+        bool is_unknown_type = false;
+        if (!table_->HasClass(let->GetIdDeclType())) {
+            is_unknown_type = true;
+            table_->semant_error(curr_clss_->get_filename(), let)
+                << "Class " << let->GetIdDeclType()
+                << " of let-bound identifier " << let->GetIdName()
+                << " is undefined.\n";
+        } else if (Symbol init_type = let->GetInit()->get_type();
+                   init_type != No_type && init_type != let->GetIdDeclType()) {
+            /*
+             * no "does not conform" error if the identifier type is undefined
+             */
+            table_->semant_error(curr_clss_->get_filename(), let)
+                << "Inferred type " << init_type << " of initialization of "
+                << let->GetIdName()
+                << " does not conform to identifier's declared type "
+                << let->GetIdDeclType() << ".\n";
+        }
+        /*
+         * body is type checked in the environment extended
+         */
+        obj_env.enterscope();
+        obj_env.addid(
+            let->GetIdName(),
+            new Symbol(
+                is_unknown_type
+                    ? No_type  // recovery: using No_type, which is a sub-type
+                               // of any type, to avoid cascading errors
+                    : let->GetIdDeclType()));
+        let->GetBody()->Accept(this);
+        obj_env.exitscope();
+        let->set_type(let->GetBody()->get_type());
+    }
+
     void VisitPlus(plus_class *plus) override {
         CheckArithmeticHasIntArgs_(plus);
     }

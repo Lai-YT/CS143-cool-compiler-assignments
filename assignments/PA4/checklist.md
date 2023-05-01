@@ -50,8 +50,8 @@
 
 # Let
 
-- [ ] Check if the declared type of identifier is defined (expected)
-- [ ] Check if the inferred type of initialization of identifier (if exists) conforms to its declared type (expected)
+- [x] Check if the declared type of identifier is defined (expected): [undefined_let_id_type.cl](tests/undefined_let_id_type.cl)
+- [x] Check if the inferred type of initialization of identifier (if exists) conforms to its declared type (expected): [not_conform_let_id_type.cl](tests/not_conform_let_id_type.cl)
 
 # Plus, Sub, Mul, Div (`+`, `-`, `*`, `/`)
 

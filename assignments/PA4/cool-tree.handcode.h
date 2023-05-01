@@ -133,6 +133,12 @@ class Visitor;
     void Accept(Visitor *) override; \
     void dump_with_types(ostream &, int);
 
+#define let_EXTRAS                                     \
+    Symbol GetIdName() const { return identifier; }    \
+    Symbol GetIdDeclType() const { return type_decl; } \
+    Expression GetInit() const { return init; }        \
+    Expression GetBody() const { return body; }
+
 #define plus_EXTRAS                             \
     Expression GetLeftOp() const { return e1; } \
     Expression GetRightOp() const { return e2; }
