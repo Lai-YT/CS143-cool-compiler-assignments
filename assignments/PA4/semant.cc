@@ -163,7 +163,7 @@ void ClassTable::CheckNoFormalNamedSelf(const Method method, const Symbol filena
     for (int i = 0; formals->more(i); i = formals->next(i)) {
         const Formal formal = formals->nth(i);
         if (formal->GetName()->equal_string("self", 4)) {
-            semant_error(filename, method)
+            semant_error(filename, formal)
                 << "'self' cannot be the name of a formal parameter.\n";
         }
     }
@@ -174,10 +174,10 @@ void ClassTable::CheckNoUndefinedFormalType(const Method method, const Symbol fi
     for (int i = 0; formals->more(i); i = formals->next(i)) {
         const Formal formal = formals->nth(i);
         if (formal->GetDeclType() == SELF_TYPE) {
-            semant_error(filename, method)
+            semant_error(filename, formal)
                 << "Formal parameter formal cannot have type SELF_TYPE.\n";
         } else if (!HasClass(formal->GetDeclType())) {
-            semant_error(filename, method)
+            semant_error(filename, formal)
                 << "Class " << formal->GetDeclType() << " of formal parameter "
                 << formal->GetName() << " is undefined.\n";
         }
@@ -190,7 +190,7 @@ void ClassTable::CheckNoRedefinedFormal(const Method method, const Symbol filena
     for (int i = 0; formals->more(i); i = formals->next(i)) {
         const Formal formal = formals->nth(i);
         if (defined_formals.find(formal->GetName()) != defined_formals.cend()) {
-            semant_error(filename, method)
+            semant_error(filename, formal)
                 << "Formal parameter " << formal->GetName()
                 << " is multiply defined.\n";
         } else {
