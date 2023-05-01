@@ -700,11 +700,15 @@ class TypeCheckVisitor : public Visitor {
 
     void VisitMethod(method_class *method) override {
         obj_env.enterscope();
+        // extend with self
+        obj_env.addid(self, new Symbol(SELF_TYPE));
+        // extend with formals
         Formals formals = method->GetFormals();
         for (int i = 0; formals->more(i); i = formals->next(i)) {
             obj_env.addid(formals->nth(i)->GetName(),
                           new Symbol(formals->nth(i)->GetDeclType()));
         }
+
         method->GetExpr()->Accept(this);
         if (!Conform_(method->GetExpr()->get_type(), method->GetReturnType())) {
             table_->semant_error(curr_clss_->get_filename(), method)
@@ -739,7 +743,12 @@ class TypeCheckVisitor : public Visitor {
     }
 
     void VisitAttr(attr_class *attr) override {
+        obj_env.enterscope();
+        // self is bounded in the initialization
+        obj_env.addid(self, new Symbol(SELF_TYPE));
         attr->GetInit()->Accept(this);
+        obj_env.exitscope();
+
         if (!Conform_(attr->GetInit()->get_type(), attr->GetDeclType())) {
             table_->semant_error(curr_clss_->get_filename(), attr)
                 << "Inferred type " << attr->GetInit()->get_type()
