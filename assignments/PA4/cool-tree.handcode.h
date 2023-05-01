@@ -139,6 +139,11 @@ class Visitor;
     Expression GetInit() const { return init; }        \
     Expression GetBody() const { return body; }
 
+#define cond_EXTRAS                                     \
+    Expression GetPredicate() const { return pred; }    \
+    Expression GetThenExpr() const { return then_exp; } \
+    Expression GetElseExpr() const { return else_exp; }
+
 #define plus_EXTRAS                             \
     Expression GetLeftOp() const { return e1; } \
     Expression GetRightOp() const { return e2; }

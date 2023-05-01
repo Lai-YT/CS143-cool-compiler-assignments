@@ -798,6 +798,18 @@ class TypeCheckVisitor : public Visitor {
         let->set_type(let->GetBody()->get_type());
     }
 
+    void VisitCond(cond_class *cond) override {
+        cond->GetPredicate()->Accept(this);
+        if (cond->GetPredicate()->get_type() != Bool) {
+            table_->semant_error(curr_clss_->get_filename(), cond)
+                << "Predicate of 'if' does not have type Bool.\n";
+        }
+        cond->GetThenExpr()->Accept(this);
+        cond->GetElseExpr()->Accept(this);
+        cond->set_type(JoinType_(cond->GetThenExpr()->get_type(),
+                                 cond->GetElseExpr()->get_type()));
+    }
+
     void VisitPlus(plus_class *plus) override {
         CheckArithmeticHasIntArgs_(plus);
     }
@@ -957,6 +969,25 @@ class TypeCheckVisitor : public Visitor {
             }
         }
         return false;
+    }
+
+    /// @return The lowest common ancestor of t1 and t2.
+    Symbol JoinType_(Symbol t1, Symbol t2) const {
+        if (t1 == t2) {
+            return t1;
+        }
+        const std::vector<Class_> p1 = table_->GetParents(table_->at(t1));
+        const std::vector<Class_> p2 = table_->GetParents(table_->at(t2));
+        // find after which class they diverged
+        Symbol ancestor = Object;
+        for (auto itr1 = p1.rbegin(), itr2 = p2.rbegin();
+             itr1 != p1.crend() && itr2 != p2.crend(); ++itr1, ++itr2) {
+            if ((*itr1)->GetName() != (*itr2)->GetName()) {
+                break;
+            }
+            ancestor = (*itr1)->GetName();
+        }
+        return ancestor;
     }
 
     /*
