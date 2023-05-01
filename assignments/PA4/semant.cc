@@ -881,7 +881,8 @@ class TypeCheckVisitor : public Visitor {
     }
 
     void VisitNew(new__class *new_) override {
-        if (!table_->HasClass(new_->GetName())) {
+        if (!table_->HasClass(new_->GetName())
+            && new_->GetName() != SELF_TYPE) {
             table_->semant_error(curr_clss_->get_filename(), new_)
                 << "'new' used with undefined class " << new_->GetName()
                 << ".\n";

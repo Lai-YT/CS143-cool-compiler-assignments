@@ -72,7 +72,7 @@
 
 # New
 
-- [x] Check if `new` is used with undefined class (not expected): [new.cl](tests/new.cl)
+- [x] Check if `new` is used with defined class or SELF_TYPE (expected): [new.cl](tests/new.cl), [new_SELF_TYPE.cl](tests/new_SELF_TYPE.cl)
 
 # Object
 
