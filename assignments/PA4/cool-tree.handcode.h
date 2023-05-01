@@ -185,6 +185,9 @@ class Visitor;
 #define block_EXTRAS \
     Expressions GetExpressions() const { return body; }
 
+#define isvoid_EXTRAS \
+    Expression GetExpr() const { return e1; }
+
 #define object_EXTRAS \
     Symbol GetName() const { return name; }
 

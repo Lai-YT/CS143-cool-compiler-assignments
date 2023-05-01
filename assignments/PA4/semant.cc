@@ -929,6 +929,12 @@ class TypeCheckVisitor : public Visitor {
         string_const->set_type(Str);
     }
 
+    void VisitIsvoid(isvoid_class *isvoid) override {
+        isvoid->GetExpr()->Accept(this);
+        // recovery: we know that a Bool is desired
+        isvoid->set_type(Bool);
+    }
+
     void VisitObject(object_class *object) override {
         Symbol *object_type = obj_env.lookup(object->GetName());
         if (!object_type) {
