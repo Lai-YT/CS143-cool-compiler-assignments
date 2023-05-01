@@ -112,8 +112,10 @@ private:
   /// @note (1) is checked first along with (2) and (3) over all classes, then
   /// the remain checks are done method by method.
   void CheckMethods();
-  // Up until Object.
-  std::vector<Class_> GetParents(const Class_) const;
+  /// @returns From c (excluded) to Object, i.e., if c is already Object, an
+  /// empty vector is returned.
+  /// @note Goes into infinite loop if contains circular inheritance.
+  std::vector<Class_> GetParents(const Class_ c) const;
   bool HasClass(Symbol name) const;
   int errors() { return semant_errors; }
   ostream& semant_error();

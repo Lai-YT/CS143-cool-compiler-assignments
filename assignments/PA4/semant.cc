@@ -1013,7 +1013,7 @@ class TypeCheckVisitor : public Visitor {
     }
 
     template <typename Arithmetic>
-    char GetArithmeticOperator_(Arithmetic *arith) {
+    char GetArithmeticOperator_(Arithmetic *arith) const {
         if (std::is_same<Arithmetic, plus_class>::value) {
             return '+';
         }
@@ -1030,10 +1030,6 @@ class TypeCheckVisitor : public Visitor {
     }
 };
 
-/*
- * Note that this function goes into infinite loop if contains circular
- * inheritance.
- */
 std::vector<Class_> ClassTable::GetParents(const Class_ clss) const {
     std::vector<Class_> parents;
     Symbol parent = clss->GetParentName();
