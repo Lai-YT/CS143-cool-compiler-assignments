@@ -772,10 +772,10 @@ class TypeCheckVisitor : public Visitor {
          * init is type checked in an environment without a new definition
          */
         let->GetInit()->Accept(this);
-        bool is_unknown_type = false;
+        bool is_undefined_type = false;
         if (!table_->HasClass(let->GetIdDeclType())
             && let->GetIdDeclType() != SELF_TYPE) {
-            is_unknown_type = true;
+            is_undefined_type = true;
             table_->semant_error(curr_clss_->get_filename(), let)
                 << "Class " << let->GetIdDeclType()
                 << " of let-bound identifier " << let->GetIdName()
@@ -798,7 +798,7 @@ class TypeCheckVisitor : public Visitor {
         obj_env.addid(
             let->GetIdName(),
             new Symbol(
-                is_unknown_type
+                is_undefined_type
                     ? No_type  // recovery: using No_type, which is a sub-type
                                // of any type, to avoid cascading errors
                     : let->GetIdDeclType()));
