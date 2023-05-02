@@ -106,12 +106,22 @@ class Visitor;
     Symbol GetName() const { return name; } \
     Expression GetExpr() const { return expr; }
 
-#define Case_EXTRAS                   \
-    virtual void Accept(Visitor *){}; \
+#define typcase_EXTRAS                          \
+    Expression GetExpr() const { return expr; } \
+    Cases GetCases() const { return cases; };
+
+#define Case_EXTRAS                         \
+    virtual void Accept(Visitor *){};       \
+    virtual Symbol GetName() const = 0;     \
+    virtual Symbol GetDeclType() const = 0; \
+    virtual Expression GetExpr() const = 0; \
     virtual void dump_with_types(ostream &, int) = 0;
 
-#define branch_EXTRAS                \
-    void Accept(Visitor *) override; \
+#define branch_EXTRAS                                \
+    void Accept(Visitor *) override;                 \
+    Symbol GetName() const { return name; }          \
+    Symbol GetDeclType() const { return type_decl; } \
+    Expression GetExpr() const { return expr; }      \
     void dump_with_types(ostream &, int);
 
 #define comp_EXTRAS \

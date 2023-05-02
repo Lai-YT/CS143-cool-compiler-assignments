@@ -47,7 +47,7 @@
 
 # Case / Branch
 
-- [ ] Check if duplicate branch exists (not expected)
+- [x] Check if duplicate branch exists (not expected): [case.cl](tests/case.cl)
 
 # Let
 

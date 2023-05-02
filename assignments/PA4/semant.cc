@@ -831,6 +831,50 @@ class TypeCheckVisitor : public Visitor {
         loop->set_type(Object);
     }
 
+    void VisitTypcase(typcase_class *typcase) override {
+        typcase->GetExpr()->Accept(this);
+        Cases cases = typcase->GetCases();
+        std::unordered_set<Symbol> branch_types{};
+        std::unordered_set<Symbol> expr_types{};
+        for (int i = cases->first(); cases->more(i); i = cases->next(i)) {
+            Case_class *case_ = cases->nth(i);
+            bool is_undefined_type = false;
+            if (branch_types.find(case_->GetDeclType())
+                != branch_types.cend()) {
+                table_->semant_error(curr_clss_->get_filename(), case_)
+                    << "Duplicate branch " << case_->GetDeclType()
+                    << " in case statement.\n";
+            } else if (!table_->HasClass(case_->GetDeclType())) {
+                table_->semant_error(curr_clss_->get_filename(), case_)
+                    << "Class " << case_->GetDeclType()
+                    << " of case branch is undefined.\n";
+                is_undefined_type = true;
+            } else {
+                branch_types.insert(case_->GetDeclType());
+            }
+            obj_env.enterscope();
+            obj_env.addid(
+                case_->GetName(),
+                new Symbol(
+                    is_undefined_type
+                        ? Object  // recovery: simply allow cascading errors
+                        : case_->GetDeclType()));
+            case_->GetExpr()->Accept(this);
+            expr_types.insert(case_->GetExpr()->get_type());
+            obj_env.exitscope();
+        }
+        typcase->set_type(JoinType_(expr_types));
+    }
+
+    void VisitBranch(branch_class *branch) override {
+        // empty
+        /*
+         * XXX: Since typcase has to know whether the class is defined, i.e.,
+         * they share additional information, I can't let the branch does the
+         * check.
+         */
+    }
+
     void VisitPlus(plus_class *plus) override {
         CheckArithmeticHasIntArgs_(plus);
     }
@@ -996,6 +1040,18 @@ class TypeCheckVisitor : public Visitor {
             }
         }
         return false;
+    }
+
+    /// @return The lowest common ancestor of types.
+    Symbol JoinType_(const std::unordered_set<Symbol> &types) const {
+        // repeatedly join with the next type and update the ancestor
+        Symbol ancestor = *types.begin();
+        auto type_itr = ++types.begin();
+        while (type_itr != types.cend()) {
+            ancestor = JoinType_(ancestor, *type_itr);
+            ++type_itr;
+        }
+        return ancestor;
     }
 
     /// @return The lowest common ancestor of t1 and t2.
