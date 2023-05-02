@@ -966,7 +966,7 @@ class TypeCheckVisitor : public Visitor {
     Class_ curr_clss_ = nullptr;
 
     /// @return true if t_prime conforms to t.
-    bool Conform_(Symbol t_prime, Symbol t) {
+    bool Conform_(Symbol t_prime, Symbol t) const {
         if (t_prime == t) {
             return true;
         }
@@ -1000,12 +1000,17 @@ class TypeCheckVisitor : public Visitor {
 
     /// @return The lowest common ancestor of t1 and t2.
     Symbol JoinType_(Symbol t1, Symbol t2) const {
-        if (t1 == t2) {
+        // Conformance check handles t1 == t2 or one is the parent of another.
+        if (Conform_(t1, t2)) {
+            return t2;
+        }
+        if (Conform_(t2, t1)) {
             return t1;
         }
+
+        // Find after which class their parents diverged.
         const std::vector<Class_> p1 = table_->GetParents(table_->at(t1));
         const std::vector<Class_> p2 = table_->GetParents(table_->at(t2));
-        // find after which class they diverged
         Symbol ancestor = Object;
         for (auto itr1 = p1.rbegin(), itr2 = p2.rbegin();
              itr1 != p1.crend() && itr2 != p2.crend(); ++itr1, ++itr2) {
