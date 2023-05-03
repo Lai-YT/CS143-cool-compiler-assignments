@@ -3,6 +3,7 @@
 #include <stdarg.h>
 #include <symtab.h>
 #include <type_traits>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 #include "cool-tree.h"
@@ -678,6 +679,16 @@ class TypeCheckVisitor : public Visitor {
 
     void VisitProgram(program_class *program) {
         Classes classes = program->GetClasses();
+        // set up method table
+        for (const auto [clss_name, clss] : *table_) {
+            for (const Method method : GetMethods(clss)) {
+                if (method_table_.find(clss_name) == method_table_.cend()) {
+                    method_table_.insert({clss_name, {}});
+                }
+                method_table_.at(clss_name).insert({method->GetName(), method});
+            }
+        }
+        // check type of classes
         for (int i = 0; classes->more(i); i = classes->next(i)) {
             curr_clss_ = classes->nth(i);
             curr_clss_->Accept(this);
@@ -875,6 +886,68 @@ class TypeCheckVisitor : public Visitor {
          */
     }
 
+    void VisitDispatch(dispatch_class *dispatch) override {
+        dispatch->GetExpr()->Accept(this);
+        /*
+         * Actual expressions are always checked.
+         * If the method is undefined, check that the number of arguments
+         * matched and the actual types conform to the formal types.
+         */
+        CheckActuals_(dispatch->GetActuals());
+        Symbol class_name = dispatch->GetExpr()->get_type();
+        if (!HasMethod_(class_name, dispatch->GetName())) {
+            ShowUndefinedMethodError_(dispatch);
+            // recovery: simply allow cascading errors
+            dispatch->set_type(Object);
+        } else {  // do formal conformance check
+            const Method method
+                = method_table_.at(class_name).at(dispatch->GetName());
+            if (dispatch->GetActuals()->len() != method->GetFormals()->len()) {
+                ShowWrongNumberOfArgumentsError_(dispatch);
+            } else {
+                ConformActualsToFormals_(dispatch, method);
+            }
+            dispatch->set_type(method->GetReturnType() == SELF_TYPE
+                                   ? class_name
+                                   : method->GetReturnType());
+        }
+    }
+
+    void VisitStaticDispatch(static_dispatch_class *static_dispatch) override {
+        static_dispatch->GetExpr()->Accept(this);
+        CheckActuals_(static_dispatch->GetActuals());
+        bool cannot_resolve_dispatch_method = false;
+        Symbol expr_type = static_dispatch->GetExpr()->get_type();
+        if (!table_->HasClass(static_dispatch->GetTypeName())) {
+            cannot_resolve_dispatch_method = true;
+            ShowUndefinedDispatchError_(static_dispatch);
+        } else if (!Conform_(expr_type, static_dispatch->GetTypeName())) {
+            cannot_resolve_dispatch_method = true;
+            ShowExprTypeNotConformError_(expr_type, static_dispatch);
+        } else if (!HasMethod_(static_dispatch->GetTypeName(),
+                               static_dispatch->GetName())) {
+            cannot_resolve_dispatch_method = true;
+            ShowUndefinedMethodError_(static_dispatch);
+        }
+        if (cannot_resolve_dispatch_method) {
+            // recovery: simply allow cascading errors
+            static_dispatch->set_type(Object);
+        } else {  // do formal conformance check
+            const Method method
+                = method_table_.at(static_dispatch->GetTypeName())
+                      .at(static_dispatch->GetName());
+            if (static_dispatch->GetActuals()->len()
+                != method->GetFormals()->len()) {
+                ShowWrongNumberOfArgumentsError_(static_dispatch);
+            } else {
+                ConformActualsToFormals_(static_dispatch, method);
+            }
+            static_dispatch->set_type(method->GetReturnType() == SELF_TYPE
+                                          ? expr_type
+                                          : method->GetReturnType());
+        }
+    }
+
     void VisitPlus(plus_class *plus) override {
         CheckArithmeticHasIntArgs_(plus);
     }
@@ -1006,7 +1079,16 @@ class TypeCheckVisitor : public Visitor {
 
    private:
     ClassTable *table_;
+
+    /// @brief For dispatch check.
+    std::unordered_map<Symbol /* class name */,
+                       std::unordered_map<Symbol /* method name */, Method>>
+        method_table_;
+
+    /// @brief Scoping.
     SymbolTable<Symbol /* name */, Symbol /* type */> obj_env;
+
+    /// @brief For error message and SELF_TYPE resolution
     Class_ curr_clss_ = nullptr;
 
     /// @return true if t_prime conforms to t.
@@ -1116,6 +1198,83 @@ class TypeCheckVisitor : public Visitor {
         }
         assert(false);
     }
+
+    /*
+     * Begin extracted functions for dispatch / static dispatch
+     */
+
+    void CheckActuals_(const Expressions actuals) {
+        for (int i = actuals->first(); actuals->more(i); i = actuals->next(i)) {
+            actuals->nth(i)->Accept(this);
+        }
+    }
+
+    template <typename Dispatch>
+    void ConformActualsToFormals_(Dispatch *dispatch, const Method method) {
+        const Formals formals = method->GetFormals();
+        const Expressions actuals = dispatch->GetActuals();
+        for (int i = formals->first(), j = actuals->first();
+             formals->more(i) && actuals->more(j);
+             i = formals->next(i), j = actuals->next(j)) {
+            const Symbol formal_type = formals->nth(i)->GetDeclType();
+            const Symbol actual_type = actuals->nth(j)->get_type();
+            if (!Conform_(actual_type, formal_type)) {
+                table_->semant_error(curr_clss_->get_filename(), dispatch)
+                    << "In call of method " << method->GetName() << ", type "
+                    << actual_type
+                    << " of parameter b does not conform to declared "
+                       "type "
+                    << formal_type << ".\n";
+            }
+        }
+    }
+
+    template <typename Dispatch>
+    void ShowUndefinedMethodError_(Dispatch *dispatch) {
+        table_->semant_error(curr_clss_->get_filename(), dispatch)
+            << "Dispatch to undefined method " << dispatch->GetName() << ".\n";
+    }
+
+    void ShowWrongNumberOfArgumentsError_(dispatch_class *dispatch) {
+        table_->semant_error(curr_clss_->get_filename(), dispatch)
+            << "Method " << dispatch->GetName()
+            << " called with wrong number of arguments.\n";
+    }
+
+    void ShowWrongNumberOfArgumentsError_(
+        static_dispatch_class *static_dispatch) {
+        // NOTE: surprisingly, the message if slightly different from dispatch
+        table_->semant_error(curr_clss_->get_filename(), static_dispatch)
+            << "Method " << static_dispatch->GetName()
+            << " invoked with wrong number of arguments.\n";
+    }
+
+    void ShowUndefinedDispatchError_(static_dispatch_class *static_dispatch) {
+        table_->semant_error(curr_clss_->get_filename(), static_dispatch)
+            << "Static dispatch to undefined class "
+            << static_dispatch->GetTypeName() << ".\n";
+    }
+
+    void ShowExprTypeNotConformError_(const Symbol expr_type,
+                                      static_dispatch_class *static_dispatch) {
+        table_->semant_error(curr_clss_->get_filename(), static_dispatch)
+            << "Expression type " << expr_type
+            << " does not conform to declared static dispatch type "
+            << static_dispatch->GetTypeName() << ".\n";
+    }
+
+    /// @param class_name The class which the method belongs to.
+    /// @param method_name
+    /// @return Whether there's such method in the class.
+    bool HasMethod_(Symbol class_name, Symbol method_name) {
+        std::unordered_map<Symbol, Method> methods_in_class
+            = method_table_.at(class_name);
+        return methods_in_class.find(method_name) != methods_in_class.cend();
+    }
+
+    /*
+     * End extracted functions for dispatch / static dispatch
+     */
 };
 
 std::vector<Class_> ClassTable::GetParents(const Class_ clss) const {

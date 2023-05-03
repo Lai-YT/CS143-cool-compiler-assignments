@@ -124,6 +124,17 @@ class Visitor;
     Expression GetExpr() const { return expr; }      \
     void dump_with_types(ostream &, int);
 
+#define dispatch_EXTRAS                         \
+    Expression GetExpr() const { return expr; } \
+    Symbol GetName() const { return name; }     \
+    Expressions GetActuals() const { return actual; }
+
+#define static_dispatch_EXTRAS                       \
+    Expression GetExpr() const { return expr; }      \
+    Symbol GetTypeName() const { return type_name; } \
+    Symbol GetName() const { return name; }          \
+    Expressions GetActuals() const { return actual; }
+
 #define comp_EXTRAS \
     Expression GetExpr() const { return e1; };
 

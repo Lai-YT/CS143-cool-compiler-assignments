@@ -34,12 +34,12 @@
 
 # Dispatch
 
-- [ ] Check if the declared static dispatch type is defined (only for static dispatch, expected)
-- [ ] Check if the expression type is defined (expected)
-- [ ] Check if the expression type conforms to the declared static dispatch type (only for static dispatch, expected)
-- [ ] Check if the method is defined (expected)
-- [ ] Check if the types of actual parameters conform to the declared type of formal parameters in call of method (expected)
-- [ ] Check if the number of arguments match in call of method (expected)
+- [x] Check if the declared static dispatch type is defined (only for static dispatch, expected): [static_dispatch.cl](tests/static_dispatch.cl)
+- [x] Check if the expression type is defined (expected): [dispatch.lc](tests/dispatch.cl), [static_dispatch.cl](tests/static_dispatch.cl)
+- [x] Check if the expression type conforms to the declared static dispatch type (only for static dispatch, expected): [static_dispatch.cl](tests/static_dispatch.cl)
+- [x] Check if the method is defined (expected): [dispatch.lc](tests/dispatch.cl), [static_dispatch.cl](tests/static_dispatch.cl)
+- [x] Check if the types of actual parameters conform to the declared type of formal parameters in call of method (expected): [dispatch.lc](tests/dispatch.cl), [static_dispatch.cl](tests/static_dispatch.cl)
+- [x] Check if the number of arguments match in call of method (expected): [dispatch.lc](tests/dispatch.cl), [static_dispatch.cl](tests/static_dispatch.cl)
 
 # Condition & Loop
 
