@@ -16,8 +16,8 @@
 class ClassTable;
 typedef ClassTable *ClassTableP;
 
-typedef method_class *Method;
-
+using Method = method_class *;
+using Attribute = attr_class *;
 
 // This is a structure that may be used to contain the semantic
 // information such as the inheritance graph.  You may use it or not as
@@ -110,7 +110,7 @@ private:
 
 bool IsMethod(const Feature f);
 std::vector<Method> GetMethods(const Class_);
-std::vector<attr_class *> GetAttrs(const Class_);
+std::vector<Attribute> GetAttrs(const Class_);
 
 class Visitor {
   /*

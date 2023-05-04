@@ -113,16 +113,15 @@ static std::unordered_map<Symbol /* class name */,
                           std::unordered_map<Symbol /* method name */, Method>>
     method_table;
 
-static std::unordered_map<
-    Symbol /* class name */,
-    std::unordered_map<Symbol /* attr name */, attr_class *>>
+static std::unordered_map<Symbol /* class name */,
+                          std::unordered_map<Symbol /* attr name */, Attribute>>
     attr_table;
 
 void ClassTable::CheckFeatures() {
     for (const auto [name, clss] : *this) {
         CheckNoRedefinedAttr(clss);
         std::unordered_map<Symbol, Method> defined_methods{};
-        std::unordered_map<Symbol, attr_class *> defined_attrs{};
+        std::unordered_map<Symbol, Attribute> defined_attrs{};
         const Features features = clss->GetFeatures();
         for (int i = features->first(); features->more(i);
              i = features->next(i)) {
@@ -146,7 +145,7 @@ void ClassTable::CheckFeatures() {
                     continue;
                 }
                 defined_methods.insert({method->GetName(), method});
-            } else if (const auto attr = dynamic_cast<attr_class *>(feature)) {
+            } else if (const auto attr = dynamic_cast<Attribute>(feature)) {
                 for (auto parent : GetParents(clss)) {
                     auto parent_attrs = GetAttrs(parent);
                     // Check whether there's an attribute with the same name in
@@ -154,7 +153,7 @@ void ClassTable::CheckFeatures() {
                     // into the attribute table.
                     if (auto itr = std::find_if(
                             parent_attrs.begin(), parent_attrs.end(),
-                            [attr](attr_class *pattr) {
+                            [attr](const Attribute pattr) {
                                 return pattr->GetName() == attr->GetName();
                             });
                         itr != parent_attrs.cend()) {
@@ -498,12 +497,12 @@ std::vector<Method> GetMethods(const Class_ clss) {
     return methods;
 }
 
-std::vector<attr_class *> GetAttrs(const Class_ clss) {
-    std::vector<attr_class *> attrs{};
+std::vector<Attribute> GetAttrs(const Class_ clss) {
+    std::vector<Attribute> attrs{};
     const Features fs = clss->GetFeatures();
     for (int i = fs->first(); fs->more(i); i = fs->next(i)) {
         const Feature feature = fs->nth(i);
-        if (auto attr = dynamic_cast<attr_class *>(feature)) {
+        if (auto attr = dynamic_cast<Attribute>(feature)) {
             attrs.push_back(attr);
         }
     }
@@ -514,7 +513,7 @@ void ClassTable::CheckNoRedefinedAttr(Class_ c) {
     std::unordered_set<Symbol> defined_attrs{};
     Features features = c->GetFeatures();
     for (int i = features->first(); features->more(i); i = features->next(i)) {
-        if (auto attr = dynamic_cast<attr_class *>(features->nth(i))) {
+        if (auto attr = dynamic_cast<Attribute>(features->nth(i))) {
             if (defined_attrs.count(attr->GetName()) != 0) {
                 semant_error(c->get_filename(), attr)
                     << "Attribute " << attr->GetName()
