@@ -83,11 +83,10 @@ static void initialize_constants(void) {
     val         = idtable.add_string("_val");
 }
 
-ClassTable::ClassTable(Classes classes)
-    : semant_errors(0), error_stream(cerr), classes(classes) {
+ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
     install_basic_classes();
 
-    // first pass: collect classes
+    // Add user-defined classes.
     // Class redefinitions are detected early in this stage.
     InstallClasses(classes);
 }
@@ -106,10 +105,15 @@ void ClassTable::CheckClasses() {
     }
 }
 
+/// @brief For dispatch check.
+static std::unordered_map<Symbol /* class name */,
+                          std::unordered_map<Symbol /* method name */, Method>>
+    method_table;
+
 void ClassTable::CheckMethods() {
-    for (const Class_ clss : GetUserDefinedClasses()) {
+    for (const auto [name, clss] : *this) {
+        std::unordered_map<Symbol, Method> defined_methods{};
         CheckNoRedefinedAttr(clss);
-        std::unordered_set<Symbol> defined_methods{};
         for (const Method method : GetMethods(clss)) {
             bool has_found_ancestor_method = false;
             for (Symbol parent = clss->GetParentName();
@@ -123,89 +127,16 @@ void ClassTable::CheckMethods() {
                 }
             }
             // Check no multiply defined method in a single class
-            if (defined_methods.find(method->GetName()) !=
-                defined_methods.cend()) {
+            if (defined_methods.find(method->GetName())
+                != defined_methods.cend()) {
                 semant_error(clss->get_filename(), method)
                     << "Method " << method->GetName()
                     << " is multiply defined.\n";
             } else {
-                defined_methods.insert(method->GetName());
+                defined_methods.insert({method->GetName(), method});
             }
         }
-    }
-    CheckHasMainClassAndMainMethod();
-    for (const Class_ clss : GetUserDefinedClasses()) {
-        CheckNoUndefinedAttrType(clss);
-        for (const Method method : GetMethods(clss)) {
-            CheckNoFormalNamedSelf(method, clss->get_filename());
-            CheckNoUndefinedFormalType(method, clss->get_filename());
-            CheckNoRedefinedFormal(method, clss->get_filename());
-            CheckNoUndefinedReturnType(method, clss->get_filename());
-        }
-    }
-}
-
-void ClassTable::CheckNoUndefinedAttrType(Class_ c) {
-    Features features = c->GetFeatures();
-    for (int i = features->first(); features->more(i); i = features->next(i)) {
-        if (auto attr = dynamic_cast<attr_class *>(features->nth(i))) {
-            if (find(attr->GetDeclType()) == cend()
-                && attr->GetDeclType() != SELF_TYPE) {
-                semant_error(c->get_filename(), attr)
-                    << "Class " << attr->GetDeclType() << " of attribute "
-                    << attr->GetName() << " is undefined.\n";
-            }
-        }
-    }
-}
-
-void ClassTable::CheckNoFormalNamedSelf(const Method method, const Symbol filename) {
-    const Formals formals = method->GetFormals();
-    for (int i = 0; formals->more(i); i = formals->next(i)) {
-        const Formal formal = formals->nth(i);
-        if (formal->GetName()->equal_string("self", 4)) {
-            semant_error(filename, formal)
-                << "'self' cannot be the name of a formal parameter.\n";
-        }
-    }
-}
-
-void ClassTable::CheckNoUndefinedFormalType(const Method method, const Symbol filename) {
-    const Formals formals = method->GetFormals();
-    for (int i = 0; formals->more(i); i = formals->next(i)) {
-        const Formal formal = formals->nth(i);
-        if (formal->GetDeclType() == SELF_TYPE) {
-            semant_error(filename, formal)
-                << "Formal parameter formal cannot have type SELF_TYPE.\n";
-        } else if (!HasClass(formal->GetDeclType())) {
-            semant_error(filename, formal)
-                << "Class " << formal->GetDeclType() << " of formal parameter "
-                << formal->GetName() << " is undefined.\n";
-        }
-    }
-}
-
-void ClassTable::CheckNoRedefinedFormal(const Method method, const Symbol filename) {
-    const Formals formals = method->GetFormals();
-    std::unordered_set<Symbol> defined_formals{};
-    for (int i = 0; formals->more(i); i = formals->next(i)) {
-        const Formal formal = formals->nth(i);
-        if (defined_formals.find(formal->GetName()) != defined_formals.cend()) {
-            semant_error(filename, formal)
-                << "Formal parameter " << formal->GetName()
-                << " is multiply defined.\n";
-        } else {
-            defined_formals.insert(formal->GetName());
-        }
-    }
-}
-
-void ClassTable::CheckNoUndefinedReturnType(const Method method, const Symbol filename) {
-    const Symbol return_type = method->GetReturnType();
-    if (!HasClass(return_type) && return_type != SELF_TYPE) {
-        semant_error(filename, method)
-            << "Undefined return type " << return_type << " in method "
-            << method->GetName() << ".\n";
+        method_table[name] = defined_methods;
     }
 }
 
@@ -679,16 +610,6 @@ class TypeCheckVisitor : public Visitor {
 
     void VisitProgram(program_class *program) {
         Classes classes = program->GetClasses();
-        // set up method table
-        for (const auto [clss_name, clss] : *table_) {
-            for (const Method method : GetMethods(clss)) {
-                if (method_table_.find(clss_name) == method_table_.cend()) {
-                    method_table_.insert({clss_name, {}});
-                }
-                method_table_.at(clss_name).insert({method->GetName(), method});
-            }
-        }
-        // check type of classes
         for (int i = 0; classes->more(i); i = classes->next(i)) {
             curr_clss_ = classes->nth(i);
             curr_clss_->Accept(this);
@@ -710,16 +631,19 @@ class TypeCheckVisitor : public Visitor {
     }
 
     void VisitMethod(method_class *method) override {
+        CheckNoFormalNamedSelf_(method);
+        CheckNoUndefinedFormalType_(method);
+        CheckNoRedefinedFormal_(method);
+        CheckNoUndefinedReturnType_(method);
         obj_env.enterscope();
         // extend with self
         obj_env.addid(self, new Symbol(SELF_TYPE));
         // extend with formals
         Formals formals = method->GetFormals();
-        for (int i = 0; formals->more(i); i = formals->next(i)) {
+        for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
             obj_env.addid(formals->nth(i)->GetName(),
                           new Symbol(formals->nth(i)->GetDeclType()));
         }
-
         method->GetExpr()->Accept(this);
         if (!Conform_(method->GetExpr()->get_type(), method->GetReturnType())) {
             table_->semant_error(curr_clss_->get_filename(), method)
@@ -759,7 +683,12 @@ class TypeCheckVisitor : public Visitor {
         obj_env.addid(self, new Symbol(SELF_TYPE));
         attr->GetInit()->Accept(this);
         obj_env.exitscope();
-
+        if (!table_->HasClass(attr->GetDeclType())
+            && attr->GetDeclType() != SELF_TYPE) {
+            table_->semant_error(curr_clss_->get_filename(), attr)
+                << "Class " << attr->GetDeclType() << " of attribute "
+                << attr->GetName() << " is undefined.\n";
+        }
         if (!Conform_(attr->GetInit()->get_type(), attr->GetDeclType())) {
             table_->semant_error(curr_clss_->get_filename(), attr)
                 << "Inferred type " << attr->GetInit()->get_type()
@@ -900,8 +829,12 @@ class TypeCheckVisitor : public Visitor {
             // recovery: simply allow cascading errors
             dispatch->set_type(Object);
         } else {  // do formal conformance check
+            // std::cerr << "dispatch to " << class_name << '\n';
             const Method method
-                = method_table_.at(class_name).at(dispatch->GetName());
+                = method_table
+                      .at(class_name == SELF_TYPE ? curr_clss_->GetName()
+                                                  : class_name)
+                      .at(dispatch->GetName());
             if (dispatch->GetActuals()->len() != method->GetFormals()->len()) {
                 ShowWrongNumberOfArgumentsError_(dispatch);
             } else {
@@ -934,7 +867,7 @@ class TypeCheckVisitor : public Visitor {
             static_dispatch->set_type(Object);
         } else {  // do formal conformance check
             const Method method
-                = method_table_.at(static_dispatch->GetTypeName())
+                = method_table.at(static_dispatch->GetTypeName())
                       .at(static_dispatch->GetName());
             if (static_dispatch->GetActuals()->len()
                 != method->GetFormals()->len()) {
@@ -1081,9 +1014,9 @@ class TypeCheckVisitor : public Visitor {
     ClassTable *table_;
 
     /// @brief For dispatch check.
-    std::unordered_map<Symbol /* class name */,
-                       std::unordered_map<Symbol /* method name */, Method>>
-        method_table_;
+    // std::unordered_map<Symbol /* class name */,
+    //                    std::unordered_map<Symbol /* method name */, Method>>
+    //     method_table;
 
     /// @brief Scoping.
     SymbolTable<Symbol /* name */, Symbol /* type */> obj_env;
@@ -1092,12 +1025,20 @@ class TypeCheckVisitor : public Visitor {
     Class_ curr_clss_ = nullptr;
 
     /// @return true if t_prime conforms to t.
+    /// @note Undefined types are resolved as Object.
     bool Conform_(Symbol t_prime, Symbol t) const {
-        if (t_prime == t) {
-            return true;
-        }
+        // std::cerr << t_prime << ", " << t << '\n';
         // No_type is a sub-type of any type
         if (t_prime == No_type) {
+            return true;
+        }
+        if (!table_->HasClass(t_prime) && t_prime != SELF_TYPE) {
+            t_prime = Object;
+        }
+        if (!table_->HasClass(t) && t != SELF_TYPE) {
+            t = Object;
+        }
+        if (t_prime == t) {
             return true;
         }
         if (t == SELF_TYPE) {
@@ -1267,13 +1208,76 @@ class TypeCheckVisitor : public Visitor {
     /// @param method_name
     /// @return Whether there's such method in the class.
     bool HasMethod_(Symbol class_name, Symbol method_name) {
+        if (class_name == SELF_TYPE) {
+            class_name = curr_clss_->GetName();
+        }
+        // std::cerr << class_name << '\n';
         std::unordered_map<Symbol, Method> methods_in_class
-            = method_table_.at(class_name);
+            = method_table.at(class_name);
         return methods_in_class.find(method_name) != methods_in_class.cend();
     }
 
     /*
      * End extracted functions for dispatch / static dispatch
+     */
+
+    /*
+     * Begin extracted function for method
+     */
+
+    void CheckNoFormalNamedSelf_(const Method method) {
+        const Formals formals = method->GetFormals();
+        for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
+            const Formal formal = formals->nth(i);
+            if (formal->GetName()->equal_string("self", 4)) {
+                table_->semant_error(curr_clss_->get_filename(), formal)
+                    << "'self' cannot be the name of a formal parameter.\n";
+            }
+        }
+    }
+
+    void CheckNoUndefinedFormalType_(const Method method) {
+        const Formals formals = method->GetFormals();
+        for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
+            const Formal formal = formals->nth(i);
+            if (formal->GetDeclType() == SELF_TYPE) {
+                table_->semant_error(curr_clss_->get_filename(), formal)
+                    << "Formal parameter formal cannot have type SELF_TYPE.\n";
+            } else if (!table_->HasClass(formal->GetDeclType())) {
+                table_->semant_error(curr_clss_->get_filename(), formal)
+                    << "Class " << formal->GetDeclType()
+                    << " of formal parameter " << formal->GetName()
+                    << " is undefined.\n";
+            }
+        }
+    }
+
+    void CheckNoRedefinedFormal_(const Method method) {
+        const Formals formals = method->GetFormals();
+        std::unordered_set<Symbol> defined_formals{};
+        for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
+            const Formal formal = formals->nth(i);
+            if (defined_formals.find(formal->GetName())
+                != defined_formals.cend()) {
+                table_->semant_error(curr_clss_->get_filename(), formal)
+                    << "Formal parameter " << formal->GetName()
+                    << " is multiply defined.\n";
+            }
+            defined_formals.insert(formal->GetName());
+        }
+    }
+
+    void CheckNoUndefinedReturnType_(const Method method) {
+        const Symbol return_type = method->GetReturnType();
+        if (!table_->HasClass(return_type) && return_type != SELF_TYPE) {
+            table_->semant_error(curr_clss_->get_filename(), method)
+                << "Undefined return type " << return_type << " in method "
+                << method->GetName() << ".\n";
+        }
+    }
+
+    /*
+     * End extracted functions for method
      */
 };
 
@@ -1332,9 +1336,7 @@ void program_class::semant() {
     }
 
     classtable->CheckMethods();
-    if (classtable->errors()) {
-        CompilationHaltedWithErrors();
-    }
+    classtable->CheckHasMainClassAndMainMethod();
 
     TypeCheckVisitor visitor{classtable};
     this->Accept(&visitor);

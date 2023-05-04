@@ -14,17 +14,17 @@
 - [x] Check method redefinition in single class (not expected): [redefined_method.cl](tests/method/redefined_method.cl)
 - [x] Check if the number of arguments, the types of the formal parameters, and the return type are exactly the same when a class tries to override the inherited method from an ancestor class: [unmatched_override](tests/method/unmatched_override.cl)
 - [x] Check if class `Main` and method `main` is defined (expected): [no_Main.cl](tests/method/no_Main.cl), [no_main_method.cl](tests/method/no_main_method.cl)
-- [x] Check if `self` is the name of some formal parameter (not expected): [self_as_formal.cl](tests/method/self_as_formal.cl)
-- [x] Check formal parameter redefinition (not expected): [formals_with_same_name.cl](tests/method/formals_with_same_name.cl)
-- [x] Check if the declared type of formal parameter is defined (expected): [undefined_formal_type.cl](tests/method/undefined_formal_type.cl)
+- [x] Check if `self` is the name of some formal parameter (not expected): [self_as_formal.cl](tests/self_as_formal.cl)
+- [x] Check formal parameter redefinition (not expected): [formals_with_same_name.cl](tests/formals_with_same_name.cl)
+- [x] Check if the declared type of formal parameter is defined (expected): [undefined_formal_type.cl](tests/undefined_formal_type.cl)
 - [x] Check if the declared type of formal parameter is SELF_TYPE (not expected): [no_formal_type_SELF_TYPE.cl](tests/no_formal_type_SELF_TYPE.cl)
-- [x] Check if the return type is defined or is SELF_TYPE (expected): [undefined_return_type.cl](tests/method/undefined_return_type.cl)
+- [x] Check if the return type is defined or is SELF_TYPE (expected): [undefined_return_type.cl](tests/undefined_return_type.cl)
 - [x] Check if the inferred return type conforms to the declared return type (expected): [not_conform_return_type.cl](tests/not_conform_return_type.cl)
 
 # Attribute
 
 - [x] Check attribute redefinition (not expected): [redefined_attr.cl](tests/method/redefined_attr.cl)
-- [x] Check if the declared type of attribute is defined or is SELF_TYPE (expected): [undefined_attr_type.cl](tests/method/undefined_attr_type.cl), [conform_SELF_TYPE.cl](tests/conform_SELF_TYPE.cl)
+- [x] Check if the declared type of attribute is defined or is SELF_TYPE (expected): [undefined_attr_type.cl](tests/undefined_attr_type.cl), [conform_SELF_TYPE.cl](tests/conform_SELF_TYPE.cl)
 - [x] Check if the inferred type of initialization of attribute (if exists) conforms to its declared type (expected): [attr.cl](tests/attr.cl)
 
 # Assign

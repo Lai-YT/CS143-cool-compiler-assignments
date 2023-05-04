@@ -25,6 +25,8 @@ typedef method_class *Method;
 // you like: it is only here to provide a container for the supplied
 // methods.
 
+/// @brief The class & method checks make sure the inheritance graph is
+/// well-formed, but detail type checks are not performed.
 class ClassTable : public std::map<Symbol, Class_> {
 private:
   int semant_errors;
@@ -62,7 +64,6 @@ private:
   void ShowUndeclaredBaseClassError(Class_ c);
   void CheckNoCircularInheritance();
   void ShowCircularInheritanceError(Class_ c);
-  void CheckHasMainClassAndMainMethod();
 
   /*
    * Checks related to method.
@@ -78,13 +79,6 @@ private:
   void CheckReturnType(Method method, Method pmethod, Symbol filename);
   void CheckNumberOfFormals(Method method, Method pmethod, Symbol filename);
   void CheckFormalTypes(Method method, Method pmethod, Symbol filename);
-  void CheckNoUndefinedAttrType(Class_ c);
-  void CheckNoFormalNamedSelf(const Method method, const Symbol filename);
-  void CheckNoUndefinedFormalType(const Method method, const Symbol filename);
-  void CheckNoRedefinedFormal(const Method method, const Symbol filename);
-  void CheckNoUndefinedReturnType(const Method method, const Symbol filename);
-
-  Classes classes;
 
  public:
   ClassTable(Classes);
@@ -93,25 +87,17 @@ private:
   /// (1) no inheritance on final basic classes,
   /// (2) no inheritance on undeclared classes,
   /// (3) no circular inheritance,
-  /// (4) has a Main class with a main method.
-  /// These four checks are done in order, and errors on the former checks
-  /// disable the latter checks (since they are meaningless under such errors).
+  /// These checks are done in order, and errors on the former checks disable
+  /// the latter checks (since they are meaningless under such errors).
   void CheckClasses();
   /// @brief Does the method-related checks.
   /// The checks are
   /// (1) no multiply defined attribute
   /// (2) no difference from original
   /// (3) no multiply defined method is a single class
-  /// (4) has Main class and main method
-  /// (5) no undefined attribute type
-  /// (6) no formal named self
-  /// (7) no undefined formal type
-  /// (8) no multiply defined formal
-  /// (9) no undefined return type
   /// Keep checking even though their are previous errors.
-  /// @note (1) is checked first along with (2) and (3) over all classes, then
-  /// the remain checks are done method by method.
   void CheckMethods();
+  void CheckHasMainClassAndMainMethod();
   /// @returns From c (excluded) to Object, i.e., if c is already Object, an
   /// empty vector is returned.
   /// @note Goes into infinite loop if contains circular inheritance.
