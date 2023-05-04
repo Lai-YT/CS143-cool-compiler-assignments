@@ -824,17 +824,12 @@ class TypeCheckVisitor : public Visitor {
          */
         CheckActuals_(dispatch->GetActuals());
         Symbol class_name = dispatch->GetExpr()->get_type();
-        if (!HasMethod_(class_name, dispatch->GetName())) {
+        auto method = GetMethod_(class_name, dispatch->GetName());
+        if (!method) {
             ShowUndefinedMethodError_(dispatch);
             // recovery: simply allow cascading errors
             dispatch->set_type(Object);
         } else {  // do formal conformance check
-            // std::cerr << "dispatch to " << class_name << '\n';
-            const Method method
-                = method_table
-                      .at(class_name == SELF_TYPE ? curr_clss_->GetName()
-                                                  : class_name)
-                      .at(dispatch->GetName());
             if (dispatch->GetActuals()->len() != method->GetFormals()->len()) {
                 ShowWrongNumberOfArgumentsError_(dispatch);
             } else {
@@ -857,8 +852,8 @@ class TypeCheckVisitor : public Visitor {
         } else if (!Conform_(expr_type, static_dispatch->GetTypeName())) {
             cannot_resolve_dispatch_method = true;
             ShowExprTypeNotConformError_(expr_type, static_dispatch);
-        } else if (!HasMethod_(static_dispatch->GetTypeName(),
-                               static_dispatch->GetName())) {
+        } else if (!GetMethod_(static_dispatch->GetTypeName(),
+                              static_dispatch->GetName())) {
             cannot_resolve_dispatch_method = true;
             ShowUndefinedMethodError_(static_dispatch);
         }
@@ -866,9 +861,8 @@ class TypeCheckVisitor : public Visitor {
             // recovery: simply allow cascading errors
             static_dispatch->set_type(Object);
         } else {  // do formal conformance check
-            const Method method
-                = method_table.at(static_dispatch->GetTypeName())
-                      .at(static_dispatch->GetName());
+            const Method method = GetMethod_(static_dispatch->GetTypeName(),
+                                            static_dispatch->GetName());
             if (static_dispatch->GetActuals()->len()
                 != method->GetFormals()->len()) {
                 ShowWrongNumberOfArgumentsError_(static_dispatch);
@@ -1023,6 +1017,15 @@ class TypeCheckVisitor : public Visitor {
 
     /// @brief For error message and SELF_TYPE resolution
     Class_ curr_clss_ = nullptr;
+
+    /// @return The name of the current class if type is SELF_TYPE, as-is
+    /// otherwise.
+    Symbol ResolveSelfType_(Symbol type) const {
+        if (type == SELF_TYPE) {
+            return curr_clss_->GetName();
+        }
+        return type;
+    }
 
     /// @return true if t_prime conforms to t.
     /// @note Undefined types are resolved as Object.
@@ -1206,15 +1209,24 @@ class TypeCheckVisitor : public Visitor {
 
     /// @param class_name The class which the method belongs to.
     /// @param method_name
-    /// @return Whether there's such method in the class.
-    bool HasMethod_(Symbol class_name, Symbol method_name) {
-        if (class_name == SELF_TYPE) {
-            class_name = curr_clss_->GetName();
+    /// @return The method defined in the class or inherited from parent, or
+    /// nullptr is not found.
+    Method GetMethod_(Symbol class_name, Symbol method_name) {
+        class_name = ResolveSelfType_(class_name);
+        /*
+         * Look up in the the class, if not found, look up in the parents.
+         */
+        if (const auto class_methods = method_table.at(class_name);
+            class_methods.count(method_name) != 0) {
+            return class_methods.at(method_name);
         }
-        // std::cerr << class_name << '\n';
-        std::unordered_map<Symbol, Method> methods_in_class
-            = method_table.at(class_name);
-        return methods_in_class.find(method_name) != methods_in_class.cend();
+        for (const Class_ parent : table_->GetParents(table_->at(class_name))) {
+            if (const auto parent_methods = method_table.at(parent->GetName());
+                parent_methods.count(method_name) != 0) {
+                return parent_methods.at(method_name);
+            }
+        }
+        return nullptr;
     }
 
     /*
