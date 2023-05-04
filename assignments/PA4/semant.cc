@@ -1089,7 +1089,8 @@ class TypeCheckVisitor : public Visitor {
         if (Conform_(t2, t1)) {
             return t1;
         }
-
+        t1 = ResolveSelfType_(t1);
+        t2 = ResolveSelfType_(t2);
         // Find after which class their parents diverged.
         const std::vector<Class_> p1 = table_->GetParents(table_->at(t1));
         const std::vector<Class_> p2 = table_->GetParents(table_->at(t2));
