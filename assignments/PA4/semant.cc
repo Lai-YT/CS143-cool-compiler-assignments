@@ -126,15 +126,12 @@ void ClassTable::CheckMethods() {
              i = features->next(i)) {
             const Feature feature = features->nth(i);
             if (const auto method = dynamic_cast<Method>(feature)) {
-                bool has_found_ancestor_method = false;
-                for (Symbol parent = clss->GetParentName();
-                     !has_found_ancestor_method && parent != No_class;
-                     parent = at(parent)->GetParentName()) {
-                    for (const Method pmethod : GetMethods(at(parent))) {
+                for (const auto parent : GetParents(clss)) {
+                    for (const Method pmethod : GetMethods(parent)) {
                         if (pmethod->GetName() == method->GetName()) {
-                            has_found_ancestor_method = true;
                             CheckNoMismatch(method, pmethod,
                                             clss->get_filename());
+                            break;
                         }
                     }
                 }
