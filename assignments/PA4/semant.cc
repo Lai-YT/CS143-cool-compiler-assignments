@@ -139,8 +139,7 @@ void ClassTable::CheckFeatures() {
                 }
                 // Check no multiply defined method in a single class.
                 // Multiply defined methods are not added into the method table.
-                if (defined_methods.find(method->GetName())
-                    != defined_methods.cend()) {
+                if (defined_methods.count(method->GetName()) != 0) {
                     semant_error(clss->get_filename(), method)
                         << "Method " << method->GetName()
                         << " is multiply defined.\n";
@@ -198,15 +197,15 @@ void ClassTable::ShowRedefinitionError(Class_ c) {
 }
 
 bool ClassTable::HasClass(Symbol name) const {
-    return find(name) != cend();
+    return count(name) != 0;
 }
 
 bool ClassTable::IsBasic(Symbol name) const {
-    return basic_classes.find(name) != basic_classes.cend();
+    return basic_classes.count(name) != 0;
 }
 
 bool ClassTable::IsFinal(Symbol name) const {
-    return final_classes.find(name) != final_classes.cend();
+    return final_classes.count(name) != 0;
 }
 
 void ClassTable::install_basic_classes() {
@@ -516,7 +515,7 @@ void ClassTable::CheckNoRedefinedAttr(Class_ c) {
     Features features = c->GetFeatures();
     for (int i = features->first(); features->more(i); i = features->next(i)) {
         if (auto attr = dynamic_cast<attr_class *>(features->nth(i))) {
-            if (defined_attrs.find(attr->GetName()) != defined_attrs.cend()) {
+            if (defined_attrs.count(attr->GetName()) != 0) {
                 semant_error(c->get_filename(), attr)
                     << "Attribute " << attr->GetName()
                     << " is multiply defined in class.\n";
@@ -829,8 +828,7 @@ class TypeCheckVisitor : public Visitor {
         for (int i = cases->first(); cases->more(i); i = cases->next(i)) {
             Case_class *case_ = cases->nth(i);
             bool is_undefined_type = false;
-            if (branch_types.find(case_->GetDeclType())
-                != branch_types.cend()) {
+            if (branch_types.count(case_->GetDeclType()) != 0) {
                 table_->semant_error(curr_clss_->get_filename(), case_)
                     << "Duplicate branch " << case_->GetDeclType()
                     << " in case statement.\n";
@@ -1312,8 +1310,7 @@ class TypeCheckVisitor : public Visitor {
         std::unordered_set<Symbol> defined_formals{};
         for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
             const Formal formal = formals->nth(i);
-            if (defined_formals.find(formal->GetName())
-                != defined_formals.cend()) {
+            if (defined_formals.count(formal->GetName()) != 0) {
                 table_->semant_error(curr_clss_->get_filename(), formal)
                     << "Formal parameter " << formal->GetName()
                     << " is multiply defined.\n";
