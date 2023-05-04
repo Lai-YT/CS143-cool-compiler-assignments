@@ -1162,10 +1162,10 @@ class TypeCheckVisitor : public Visitor {
             if (!Conform_(actual_type, formal_type)) {
                 table_->semant_error(curr_clss_->get_filename(), dispatch)
                     << "In call of method " << method->GetName() << ", type "
-                    << actual_type
-                    << " of parameter b does not conform to declared "
-                       "type "
-                    << formal_type << ".\n";
+                    << actual_type << " of parameter "
+                    << formals->nth(i)->GetName()
+                    << " does not conform to declared type " << formal_type
+                    << ".\n";
             }
         }
     }
