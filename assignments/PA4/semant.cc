@@ -713,8 +713,7 @@ class TypeCheckVisitor : public Visitor {
          */
         let->GetInit()->Accept(this);
         bool is_undefined_type = false;
-        if (!table_->HasClass(let->GetIdDeclType())
-            && let->GetIdDeclType() != SELF_TYPE) {
+        if (!table_->HasClass(ResolveSelfType_(let->GetIdDeclType()))) {
             is_undefined_type = true;
             table_->semant_error(curr_clss_->get_filename(), let)
                 << "Class " << let->GetIdDeclType()
@@ -958,8 +957,7 @@ class TypeCheckVisitor : public Visitor {
     }
 
     void VisitNew(new__class *new_) override {
-        if (!table_->HasClass(new_->GetName())
-            && new_->GetName() != SELF_TYPE) {
+        if (!table_->HasClass(ResolveSelfType_(new_->GetName()))) {
             table_->semant_error(curr_clss_->get_filename(), new_)
                 << "'new' used with undefined class " << new_->GetName()
                 << ".\n";
@@ -1007,11 +1005,6 @@ class TypeCheckVisitor : public Visitor {
    private:
     ClassTable *table_;
 
-    /// @brief For dispatch check.
-    // std::unordered_map<Symbol /* class name */,
-    //                    std::unordered_map<Symbol /* method name */, Method>>
-    //     method_table;
-
     /// @brief Scoping.
     SymbolTable<Symbol /* name */, Symbol /* type */> obj_env;
 
@@ -1030,7 +1023,6 @@ class TypeCheckVisitor : public Visitor {
     /// @return true if t_prime conforms to t.
     /// @note Undefined types are resolved as Object.
     bool Conform_(Symbol t_prime, Symbol t) const {
-        // std::cerr << t_prime << ", " << t << '\n';
         // No_type is a sub-type of any type
         if (t_prime == No_type) {
             return true;
@@ -1052,11 +1044,10 @@ class TypeCheckVisitor : public Visitor {
             return false;
         }
         if (t_prime == SELF_TYPE) {
-            if (t == curr_clss_->GetName()) {
+            t_prime = ResolveSelfType_(t_prime);
+            if (t_prime == t) {
                 return true;
             }
-            // SELF_TYPE indicates the current class
-            t_prime = curr_clss_->GetName();
         }
 
         // t_prime should have t as one of its parents
