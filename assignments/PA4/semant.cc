@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -110,33 +111,66 @@ static std::unordered_map<Symbol /* class name */,
                           std::unordered_map<Symbol /* method name */, Method>>
     method_table;
 
+static std::unordered_map<
+    Symbol /* class name */,
+    std::unordered_map<Symbol /* attr name */, attr_class *>>
+    attr_table;
+
 void ClassTable::CheckMethods() {
     for (const auto [name, clss] : *this) {
-        std::unordered_map<Symbol, Method> defined_methods{};
         CheckNoRedefinedAttr(clss);
-        for (const Method method : GetMethods(clss)) {
-            bool has_found_ancestor_method = false;
-            for (Symbol parent = clss->GetParentName();
-                 !has_found_ancestor_method && parent != No_class;
-                 parent = at(parent)->GetParentName()) {
-                for (const Method pmethod : GetMethods(at(parent))) {
-                    if (pmethod->GetName() == method->GetName()) {
-                        has_found_ancestor_method = true;
-                        CheckNoMismatch(method, pmethod, clss->get_filename());
+        std::unordered_map<Symbol, Method> defined_methods{};
+        std::unordered_map<Symbol, attr_class *> defined_attrs{};
+        const Features features = clss->GetFeatures();
+        for (int i = features->first(); features->more(i);
+             i = features->next(i)) {
+            const Feature feature = features->nth(i);
+            if (const auto method = dynamic_cast<Method>(feature)) {
+                bool has_found_ancestor_method = false;
+                for (Symbol parent = clss->GetParentName();
+                     !has_found_ancestor_method && parent != No_class;
+                     parent = at(parent)->GetParentName()) {
+                    for (const Method pmethod : GetMethods(at(parent))) {
+                        if (pmethod->GetName() == method->GetName()) {
+                            has_found_ancestor_method = true;
+                            CheckNoMismatch(method, pmethod,
+                                            clss->get_filename());
+                        }
                     }
                 }
-            }
-            // Check no multiply defined method in a single class
-            if (defined_methods.find(method->GetName())
-                != defined_methods.cend()) {
-                semant_error(clss->get_filename(), method)
-                    << "Method " << method->GetName()
-                    << " is multiply defined.\n";
-            } else {
+                // Check no multiply defined method in a single class.
+                // Multiply defined methods are not added into the method table.
+                if (defined_methods.find(method->GetName())
+                    != defined_methods.cend()) {
+                    semant_error(clss->get_filename(), method)
+                        << "Method " << method->GetName()
+                        << " is multiply defined.\n";
+                    continue;
+                }
                 defined_methods.insert({method->GetName(), method});
+            } else if (const auto attr = dynamic_cast<attr_class *>(feature)) {
+                for (auto parent : GetParents(clss)) {
+                    auto parent_attrs = GetAttrs(parent);
+                    // Check whether there's an attribute with the same name in
+                    // parents. Redefined inherited attributes are not added
+                    // into the attribute table.
+                    if (auto itr = std::find_if(
+                            parent_attrs.begin(), parent_attrs.end(),
+                            [attr](attr_class *pattr) {
+                                return pattr->GetName() == attr->GetName();
+                            });
+                        itr != parent_attrs.cend()) {
+                        semant_error(clss->get_filename(), attr)
+                            << "Attribute " << attr->GetName()
+                            << " is an attribute of an inherited class.\n";
+                        break;
+                    }
+                    defined_attrs.insert({attr->GetName(), attr});
+                }
             }
         }
         method_table[name] = defined_methods;
+        attr_table[name] = defined_attrs;
     }
 }
 
@@ -466,6 +500,18 @@ std::vector<Method> GetMethods(const Class_ clss) {
     return methods;
 }
 
+std::vector<attr_class *> GetAttrs(const Class_ clss) {
+    std::vector<attr_class *> attrs{};
+    const Features fs = clss->GetFeatures();
+    for (int i = fs->first(); fs->more(i); i = fs->next(i)) {
+        const Feature feature = fs->nth(i);
+        if (auto attr = dynamic_cast<attr_class *>(feature)) {
+            attrs.push_back(attr);
+        }
+    }
+    return attrs;
+}
+
 void ClassTable::CheckNoRedefinedAttr(Class_ c) {
     std::unordered_set<Symbol> defined_attrs{};
     Features features = c->GetFeatures();
@@ -618,13 +664,19 @@ class TypeCheckVisitor : public Visitor {
 
     void VisitClass(class__class *clss) override {
         obj_env.enterscope();
-        Features features = clss->GetFeatures();
-        for (int i = 0; features->more(i); i = features->next(i)) {
-            if (auto attr = dynamic_cast<attr_class *>(features->nth(i))) {
-                obj_env.addid(attr->GetName(), new Symbol(attr->GetDeclType()));
+        // add attributes defined in this class
+        for (const auto attr : GetAttrs(clss)) {
+            obj_env.addid(attr->GetName(), new Symbol(attr->GetDeclType()));
+        }
+        // add attributes inherited from parent
+        for (const auto parent : table_->GetParents(clss)) {
+            for (const auto [attr_name, attr] : attr_table.at(parent->GetName())) {
+                obj_env.addid(attr_name, new Symbol(attr->GetDeclType()));
             }
         }
-        for (int i = 0; features->more(i); i = features->next(i)) {
+        Features features = clss->GetFeatures();
+        for (int i = features->first(); features->more(i);
+             i = features->next(i)) {
             features->nth(i)->Accept(this);
         }
         obj_env.exitscope();

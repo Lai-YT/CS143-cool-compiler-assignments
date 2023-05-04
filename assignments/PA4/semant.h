@@ -111,6 +111,7 @@ private:
 
 bool IsMethod(const Feature f);
 std::vector<Method> GetMethods(const Class_);
+std::vector<attr_class *> GetAttrs(const Class_);
 
 class Visitor {
   /*
