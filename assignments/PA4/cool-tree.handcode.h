@@ -62,7 +62,7 @@ class Visitor;
     virtual Symbol GetParentName() const = 0; \
     virtual Symbol GetName() const = 0;       \
     virtual Features GetFeatures() const = 0; \
-    virtual void Accept(Visitor *){};         \
+    virtual void Accept(Visitor *) = 0;       \
     virtual void dump_with_types(ostream &, int) = 0;
 
 #define class__EXTRAS                                 \
@@ -75,7 +75,7 @@ class Visitor;
 
 #define Feature_EXTRAS                  \
     virtual Symbol GetName() const = 0; \
-    virtual void Accept(Visitor *){};   \
+    virtual void Accept(Visitor *) = 0; \
     virtual void dump_with_types(ostream &, int) = 0;
 
 #define Feature_SHARED_EXTRAS               \
@@ -111,7 +111,7 @@ class Visitor;
     Cases GetCases() const { return cases; };
 
 #define Case_EXTRAS                         \
-    virtual void Accept(Visitor *){};       \
+    virtual void Accept(Visitor *) = 0;     \
     virtual Symbol GetName() const = 0;     \
     virtual Symbol GetDeclType() const = 0; \
     virtual Expression GetExpr() const = 0; \
@@ -148,7 +148,7 @@ class Visitor;
     Expression_class() { type = (Symbol)NULL; }       \
     void dump_type(ostream &, int);                   \
     virtual void dump_with_types(ostream &, int) = 0; \
-    virtual void Accept(Visitor *){};
+    virtual void Accept(Visitor *) = 0;
 
 #define Expression_SHARED_EXTRAS     \
     void Accept(Visitor *) override; \
