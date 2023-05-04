@@ -1,9 +1,8 @@
 #ifndef SEMANT_H_
 #define SEMANT_H_
 
-#include <assert.h>
-#include <iostream>
 #include <map>
+#include <ostream>
 #include <unordered_set>
 #include <vector>
 #include "cool-tree.h"
@@ -66,7 +65,7 @@ private:
   void ShowCircularInheritanceError(Class_ c);
 
   /*
-   * Checks related to method.
+   * Checks related to features.
    */
 
   void CheckNoRedefinedAttr(Class_ c);
@@ -90,13 +89,13 @@ private:
   /// These checks are done in order, and errors on the former checks disable
   /// the latter checks (since they are meaningless under such errors).
   void CheckClasses();
-  /// @brief Does the method-related checks.
+  /// @brief Does the feature-related checks.
   /// The checks are
   /// (1) no multiply defined attribute
   /// (2) no difference from original
   /// (3) no multiply defined method is a single class
   /// Keep checking even though their are previous errors.
-  void CheckMethods();
+  void CheckFeatures();
   void CheckHasMainClassAndMainMethod();
   /// @returns From c (excluded) to Object, i.e., if c is already Object, an
   /// empty vector is returned.

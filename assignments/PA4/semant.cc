@@ -1,4 +1,6 @@
 #include <algorithm>
+#include <assert.h>
+#include <ostream>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -116,7 +118,7 @@ static std::unordered_map<
     std::unordered_map<Symbol /* attr name */, attr_class *>>
     attr_table;
 
-void ClassTable::CheckMethods() {
+void ClassTable::CheckFeatures() {
     for (const auto [name, clss] : *this) {
         CheckNoRedefinedAttr(clss);
         std::unordered_map<Symbol, Method> defined_methods{};
@@ -1388,7 +1390,7 @@ void program_class::semant() {
         CompilationHaltedWithErrors();
     }
 
-    classtable->CheckMethods();
+    classtable->CheckFeatures();
     classtable->CheckHasMainClassAndMainMethod();
 
     TypeCheckVisitor visitor{classtable};
