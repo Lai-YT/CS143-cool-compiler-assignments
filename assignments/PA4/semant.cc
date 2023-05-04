@@ -662,13 +662,11 @@ class TypeCheckVisitor : public Visitor {
 
     void VisitClass(class__class *clss) override {
         obj_env.enterscope();
-        // add attributes defined in this class
-        for (const auto attr : GetAttrs(clss)) {
-            obj_env.addid(attr->GetName(), new Symbol(attr->GetDeclType()));
-        }
-        // add attributes inherited from parent
-        for (const auto parent : table_->GetParents(clss)) {
-            for (const auto [attr_name, attr] : attr_table.at(parent->GetName())) {
+        // add attributes defined in this class & inherited from parent
+        std::vector<Class_> this_and_parents = table_->GetParents(clss);
+        this_and_parents.push_back(clss);
+        for (const auto c : this_and_parents) {
+            for (const auto [attr_name, attr] : attr_table.at(c->GetName())) {
                 obj_env.addid(attr_name, new Symbol(attr->GetDeclType()));
             }
         }
