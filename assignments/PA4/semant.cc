@@ -113,6 +113,7 @@ static std::unordered_map<Symbol /* class name */,
                           std::unordered_map<Symbol /* method name */, Method>>
     method_table;
 
+/// @brief For inheriting attributes.
 static std::unordered_map<Symbol /* class name */,
                           std::unordered_map<Symbol /* attr name */, Attribute>>
     attr_table;
@@ -127,13 +128,16 @@ void ClassTable::CheckFeatures() {
              i = features->next(i)) {
             const Feature feature = features->nth(i);
             if (const auto method = dynamic_cast<Method>(feature)) {
+                // Check method overriden with the same signature.
                 for (const auto parent : GetParents(clss)) {
-                    for (const Method pmethod : GetMethods(parent)) {
-                        if (pmethod->GetName() == method->GetName()) {
-                            CheckNoMismatch(method, pmethod,
-                                            clss->get_filename());
-                            break;
-                        }
+                    const auto parent_methods = GetMethods(parent);
+                    if (const auto itr = std::find_if(
+                            parent_methods.begin(), parent_methods.end(),
+                            [method](const Method pmethod) {
+                                return pmethod->GetName() == method->GetName();
+                            });
+                        itr != parent_methods.cend()) {
+                        CheckNoMismatch(method, *itr, clss->get_filename());
                     }
                 }
                 // Check no multiply defined method in a single class.
@@ -146,12 +150,12 @@ void ClassTable::CheckFeatures() {
                 }
                 defined_methods.insert({method->GetName(), method});
             } else if (const auto attr = dynamic_cast<Attribute>(feature)) {
-                for (auto parent : GetParents(clss)) {
-                    auto parent_attrs = GetAttrs(parent);
+                for (const auto parent : GetParents(clss)) {
+                    const auto parent_attrs = GetAttrs(parent);
                     // Check whether there's an attribute with the same name in
                     // parents. Redefined inherited attributes are not added
                     // into the attribute table.
-                    if (auto itr = std::find_if(
+                    if (const auto itr = std::find_if(
                             parent_attrs.begin(), parent_attrs.end(),
                             [attr](const Attribute pattr) {
                                 return pattr->GetName() == attr->GetName();
@@ -898,7 +902,7 @@ class TypeCheckVisitor : public Visitor {
             cannot_resolve_dispatch_method = true;
             ShowExprTypeNotConformError_(expr_type, static_dispatch);
         } else if (!GetMethod_(static_dispatch->GetTypeName(),
-                              static_dispatch->GetName())) {
+                               static_dispatch->GetName())) {
             cannot_resolve_dispatch_method = true;
             ShowUndefinedMethodError_(static_dispatch);
         }
@@ -907,7 +911,7 @@ class TypeCheckVisitor : public Visitor {
             static_dispatch->set_type(Object);
         } else {  // do formal conformance check
             const Method method = GetMethod_(static_dispatch->GetTypeName(),
-                                            static_dispatch->GetName());
+                                             static_dispatch->GetName());
             if (static_dispatch->GetActuals()->len()
                 != method->GetFormals()->len()) {
                 ShowWrongNumberOfArgumentsError_(static_dispatch);
