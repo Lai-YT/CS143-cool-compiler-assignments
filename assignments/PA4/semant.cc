@@ -474,7 +474,7 @@ void ClassTable::CheckFormalTypes(Method method, Method pmethod,
                                   Symbol filename) {
     const Formals formals = method->GetFormals();
     const Formals pformals = pmethod->GetFormals();
-    for (int i = 0; formals->more(i) && pformals->more(i); i++) {
+    for (int i = formals->first(); formals->more(i) && pformals->more(i); i++) {
         const Symbol formal_type = formals->nth(i)->GetDeclType();
         const Symbol pformal_type = pformals->nth(i)->GetDeclType();
         if (formal_type != pformal_type) {
@@ -654,7 +654,7 @@ class TypeCheckVisitor : public Visitor {
 
     void VisitProgram(program_class *program) {
         Classes classes = program->GetClasses();
-        for (int i = 0; classes->more(i); i = classes->next(i)) {
+        for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
             curr_clss_ = classes->nth(i);
             curr_clss_->Accept(this);
         }
