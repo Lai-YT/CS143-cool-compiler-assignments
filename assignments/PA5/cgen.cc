@@ -616,6 +616,13 @@ void CgenClassTable::code_constants()
   code_bools(boolclasstag);
 }
 
+void CgenClassTable::code_prototype_objects() {
+  // NOTE: cannot use `list_map` with lambda because such lambda requires a
+  // capture on `this`, which is not convertible to a function pointer.
+  for (List<CgenNode> *l = nds; l != NULL; l = l->tl()) {
+    l->hd()->code_prototype_object(str);
+  }
+}
 
 CgenClassTable::CgenClassTable(Classes classes, ostream& s) : nds(NULL) , str(s)
 {
@@ -835,6 +842,8 @@ void CgenClassTable::code()
 //                   - class_nameTab
 //                   - dispatch tables
 //
+  if (cgen_debug) cout << "coding prototype objects" << endl;
+  code_prototype_objects();
 
   if (cgen_debug) cout << "coding global text" << endl;
   code_global_text();
@@ -904,6 +913,17 @@ void CgenNode::set_classtag() {
    }
 }
 
+void CgenNode::code_prototype_object(ostream &s) {
+   if (cgen_debug) {
+    cout << '\t' << name << endl;
+   }
+   s << WORD << -1 << endl;  // For GC
+   s << name << PROTOBJ_SUFFIX << LABEL;
+   s << WORD << classtag << endl;
+   s << WORD << (DEFAULT_OBJFIELDS + 0) << " # TODO: number of attributes" << endl;
+   s << WORD; emit_disptable_ref(name, s); s << endl;
+   s << "# TODO: attributes" << endl;
+}
 
 //******************************************************************
 //

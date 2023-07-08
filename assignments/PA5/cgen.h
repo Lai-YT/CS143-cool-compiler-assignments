@@ -31,6 +31,7 @@ private:
    void code_bools(int);
    void code_select_gc();
    void code_constants();
+   void code_prototype_objects();
 
 // The following creates an inheritance graph from
 // a list of classes.  The graph is implemented as
@@ -69,6 +70,8 @@ public:
    void set_parentnd(CgenNodeP p);
    CgenNodeP get_parentnd() { return parentnd; }
    int basic() { return (basic_status == Basic); }
+
+   void code_prototype_object(ostream&);
 };
 
 class BoolConst
