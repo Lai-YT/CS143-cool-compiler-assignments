@@ -50,7 +50,7 @@ public:
 
 
 class CgenNode : public class__class {
-private: 
+private:
    CgenNodeP parentnd;                        // Parent of class
    List<CgenNode> *children;                  // Children of class
    Basicness basic_status;                    // `Basic' if class is basic
@@ -68,13 +68,12 @@ public:
    int basic() { return (basic_status == Basic); }
 };
 
-class BoolConst 
+class BoolConst
 {
- private: 
+ private:
   int val;
  public:
   BoolConst(int);
   void code_def(ostream&, int boolclasstag);
   void code_ref(ostream&) const;
 };
-
