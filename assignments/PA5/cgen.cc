@@ -619,9 +619,11 @@ void CgenClassTable::code_constants()
 
 CgenClassTable::CgenClassTable(Classes classes, ostream& s) : nds(NULL) , str(s)
 {
-   stringclasstag = 0 /* Change to your String class tag here */;
-   intclasstag =    0 /* Change to your Int class tag here */;
-   boolclasstag =   0 /* Change to your Bool class tag here */;
+  //  NOTE: the reference compiler uses these three tags for basic class,
+  //  which is the reason why I choose them
+   stringclasstag = 5 /* Change to your String class tag here */;
+   intclasstag =    3 /* Change to your Int class tag here */;
+   boolclasstag =   4 /* Change to your Bool class tag here */;
 
    enterscope();
    if (cgen_debug) cout << "Building CgenClassTable" << endl;
@@ -864,6 +866,42 @@ CgenNode::CgenNode(Class_ nd, Basicness bstatus, CgenClassTableP ct) :
    basic_status(bstatus)
 {
    stringtable.add_string(name->get_string());          // Add class name to string table
+   set_classtag();
+}
+
+// 0 ~ 5 are reserved for basic classes:
+// 0: Object
+// 1: IO
+// 2: Main
+// 3: Int
+// 4: Bool
+// 5: String
+int CgenNode::next_classtag = 6;
+
+void CgenNode::set_classtag() {
+   if (!basic()) {
+    classtag = next_classtag++;
+    return;
+   }
+   if (name == Object) {
+    classtag = 0;
+   } else if (name == IO) {
+    classtag = 1;
+   } else if (name == Main) {
+    classtag = 2;
+   } else if (name == Int) {
+    classtag = 3;
+   } else if (name == Bool) {
+    classtag = 4;
+   } else if (name == Str) {
+    classtag = 5;
+   } else {
+    // Non-generating classes fall into here, e.g., No_class.
+    // It's okay that we ignore them.
+    if (cgen_debug) {
+        cout << "\tignore non-generating class: " << name << endl;
+    }
+   }
 }
 
 

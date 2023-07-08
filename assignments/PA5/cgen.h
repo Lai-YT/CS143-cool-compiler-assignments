@@ -55,6 +55,9 @@ private:
    List<CgenNode> *children;                  // Children of class
    Basicness basic_status;                    // `Basic' if class is basic
                                               // `NotBasic' otherwise
+   static int next_classtag;
+   int classtag = -1;
+   void set_classtag();
 
 public:
    CgenNode(Class_ c,
