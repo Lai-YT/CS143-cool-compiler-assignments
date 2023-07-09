@@ -23,6 +23,7 @@
 //**************************************************************
 
 #include <functional>
+#include <vector>
 
 #include "cgen.h"
 #include "cgen_gc.h"
@@ -640,6 +641,29 @@ void CgenClassTable::code_prototype_objects() {
                      nds);
 }
 
+//
+// At index (classtag) ∗ 4 contains a pointer to a String object containing
+// the name of the class associated.
+//
+void CgenClassTable::code_class_name_table() {
+
+  // The order of nodes in `nds` doesn't necessarily follows their classtags,
+  // which means we need to sort them first.
+  auto nodes = std::vector<CgenNode *>{};
+  list_map<CgenNode>([&nodes](CgenNode *nd) { nodes.push_back(nd); }, nds);
+  std::sort(nodes.begin(), nodes.end(), [](CgenNode *a, CgenNode *b) {
+      return a->get_classtag() < b->get_classtag();
+  });
+
+  // emit code
+  str << CLASSNAMETAB << ':' << endl;
+  for (auto *nd : nodes) {
+    str << WORD;
+    stringtable.lookup_string(nd->name->get_string())->code_ref(str);
+    str << endl;
+  }
+}
+
 CgenClassTable::CgenClassTable(Classes classes, ostream& s) : nds(NULL) , str(s)
 {
   //  NOTE: the reference compiler uses these three tags for basic class,
@@ -860,6 +884,9 @@ void CgenClassTable::code()
 //
   if (cgen_debug) cout << "coding prototype objects" << endl;
   code_prototype_objects();
+
+  if (cgen_debug) cout << "coding class name table" << endl;
+  code_class_name_table();
 
   if (cgen_debug) cout << "coding global text" << endl;
   code_global_text();
