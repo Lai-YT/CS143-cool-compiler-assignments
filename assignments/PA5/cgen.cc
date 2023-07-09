@@ -22,6 +22,8 @@
 //
 //**************************************************************
 
+#include <functional>
+
 #include "cgen.h"
 #include "cgen_gc.h"
 
@@ -494,6 +496,22 @@ void BoolConst::code_def(ostream& s, int boolclasstag)
       s << WORD << val << endl;                             // value (0 or 1)
 }
 
+
+//////////////////////////////////////////////////////////////////////////////
+//
+//  Overloads of list methods
+//
+//  We find them useful with modern C++ features.
+//
+//////////////////////////////////////////////////////////////////////////////
+
+template <class T>
+void list_map(std::function<void(T*)>f, List<T> *l)
+{
+  for (l; l != NULL; l = l->tl())
+    f(l->hd());
+}
+
 //////////////////////////////////////////////////////////////////////////////
 //
 //  CgenClassTable methods
@@ -617,11 +635,9 @@ void CgenClassTable::code_constants()
 }
 
 void CgenClassTable::code_prototype_objects() {
-  // NOTE: cannot use `list_map` with lambda because such lambda requires a
-  // capture on `this`, which is not convertible to a function pointer.
-  for (List<CgenNode> *l = nds; l != NULL; l = l->tl()) {
-    l->hd()->code_prototype_object(str);
-  }
+  // template argument cannot be easily deduced with lambda
+  list_map<CgenNode>([this](CgenNode *nd) { nd->code_prototype_object(str); },
+                     nds);
 }
 
 CgenClassTable::CgenClassTable(Classes classes, ostream& s) : nds(NULL) , str(s)
