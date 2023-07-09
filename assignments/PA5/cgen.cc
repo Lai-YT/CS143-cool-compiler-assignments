@@ -889,15 +889,17 @@ int CgenNode::next_classtag = 6;
 
 void CgenNode::set_classtag() {
    if (!basic()) {
-    classtag = next_classtag++;
+    if (name == Main) {
+      classtag = 2;
+    } else {
+      classtag = next_classtag++;
+    }
     return;
    }
    if (name == Object) {
     classtag = 0;
    } else if (name == IO) {
     classtag = 1;
-   } else if (name == Main) {
-    classtag = 2;
    } else if (name == Int) {
     classtag = 3;
    } else if (name == Bool) {
@@ -908,7 +910,7 @@ void CgenNode::set_classtag() {
     // Non-generating classes fall into here, e.g., No_class.
     // It's okay that we ignore them.
     if (cgen_debug) {
-        cout << "\tignore non-generating class: " << name << endl;
+      cout << "\tignore non-generating class: " << name << endl;
     }
    }
 }
