@@ -642,43 +642,45 @@ void CgenClassTable::code_prototype_objects() {
 }
 
 //
-// At index (classtag) ∗ 4 contains a pointer to a String object containing
-// the name of the class associated.
+// Returns a vector which contains the nodes in nds, sorted in ascending order
+// with classtag.
 //
-void CgenClassTable::code_class_name_table() {
-
-  // The order of nodes in `nds` doesn't necessarily follows their classtags,
-  // which means we need to sort them first.
+static std::vector<CgenNode *> sort_list_with_classtag_as_vector(
+    List<CgenNode> *nds) {
   auto nodes = std::vector<CgenNode *>{};
   list_map<CgenNode>([&nodes](CgenNode *nd) { nodes.push_back(nd); }, nds);
   std::sort(nodes.begin(), nodes.end(), [](CgenNode *a, CgenNode *b) {
       return a->get_classtag() < b->get_classtag();
   });
+  return nodes;
+}
 
-  // emit code
+//
+// At index (classtag) ∗ 4 contains a pointer to a String object containing
+// the name of the class associated.
+//
+void CgenClassTable::code_class_name_table() {
+  // NOTE: the order of nodes in `nds` doesn't necessarily follows their
+  // classtags, which means we need to sort them first.
   str << CLASSNAMETAB << LABEL;
-  for (auto *nd : nodes) {
+  for (auto *nd : sort_list_with_classtag_as_vector(nds)) {
     str << WORD;
     stringtable.lookup_string(nd->name->get_string())->code_ref(str);
     str << endl;
   }
 }
 
+//
 // At index (classtag) * 8 contains a pointer to the prototype object and at
 // index (classtag) * 8 + 4 contains a pointer to the initialization method for
 // that class.
+//
 void CgenClassTable::code_class_object_table() {
-  // The order of nodes in `nds` doesn't necessarily follows their classtags,
-  // which means we need to sort them first.
-  auto nodes = std::vector<CgenNode *>{};
-  list_map<CgenNode>([&nodes](CgenNode *nd) { nodes.push_back(nd); }, nds);
-  std::sort(nodes.begin(), nodes.end(), [](CgenNode *a, CgenNode *b) {
-      return a->get_classtag() < b->get_classtag();
-  });
-
   // emit code
+  // NOTE: The order of nodes in `nds` doesn't necessarily follows their
+  // classtags, which means we need to sort them first.
   str << CLASSOBJTAB << LABEL;
-  for (auto *nd : nodes) {
+  for (auto *nd : sort_list_with_classtag_as_vector(nds)) {
     str << WORD << nd->name << PROTOBJ_SUFFIX << endl;
     str << WORD << nd->name << CLASSINIT_SUFFIX << endl;
   }
