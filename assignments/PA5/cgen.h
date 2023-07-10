@@ -72,7 +72,7 @@ public:
    void add_child(CgenNodeP child);
    List<CgenNode> *get_children() { return children; }
    void set_parentnd(CgenNodeP p);
-   CgenNodeP get_parentnd() { return parentnd; }
+   CgenNodeP get_parentnd() const { return parentnd; }
    int basic() { return (basic_status == Basic); }
 
    int get_classtag() const { return classtag; }

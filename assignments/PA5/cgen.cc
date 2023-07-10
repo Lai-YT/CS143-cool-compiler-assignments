@@ -545,11 +545,10 @@ static std::vector<CgenNode *> sort_list_with_classtag_as_vector(
 //
 // Object will be the first parent. nd itself is excluded.
 //
-static List<CgenNode>* get_parents(CgenNode *nd) {
-  nd = nd->get_parentnd();
+static List<CgenNode>* get_parents(const CgenNode *nd) {
   List<CgenNode>* parents = NULL;
-  while (nd->name != No_class) {
-    parents = new List(nd, parents);
+  while (nd->name != Object) {
+    parents = new List(nd->get_parentnd(), parents);
     nd = nd->get_parentnd();
   }
   return parents;
@@ -1059,7 +1058,7 @@ std::vector<attr_class *> CgenNode::get_attributes() const {
                }
            }
        },
-       get_parents(const_cast<CgenNode *>(this)));
+       get_parents(this));
    return attributes;
 }
 
