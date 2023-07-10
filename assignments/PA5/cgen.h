@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
+#include <vector>
 #include "emit.h"
 #include "cool-tree.h"
 #include "symtab.h"
@@ -75,7 +76,9 @@ public:
    int basic() { return (basic_status == Basic); }
 
    int get_classtag() const { return classtag; }
+   std::vector<attr_class *> get_attributes() const;
    void code_prototype_object(ostream&) const;
+   void code_attributes(ostream&) const;
    void code_dispatch_table(ostream&) const;
 };
 

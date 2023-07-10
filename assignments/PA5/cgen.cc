@@ -1041,9 +1041,43 @@ void CgenNode::code_prototype_object(ostream &s) const {
    s << WORD << -1 << endl;  // For GC
    s << name << PROTOBJ_SUFFIX << LABEL;
    s << WORD << classtag << endl;
-   s << WORD << (DEFAULT_OBJFIELDS + 0) << " # TODO: number of attributes" << endl;
-   s << WORD; emit_disptable_ref(name, s); s << endl;
-   s << "# TODO: attributes" << endl;
+   int number_of_attributes = 0;
+   s << WORD << (DEFAULT_OBJFIELDS + get_attributes().size()) << endl;
+   s << WORD;  emit_disptable_ref(name, s); s << endl;
+   code_attributes(s);
+}
+
+std::vector<attr_class *> CgenNode::get_attributes() const {
+   auto attributes = std::vector<attr_class *>{};
+   list_map<CgenNode>(
+       [&attributes](CgenNode *parent) {
+           for (int i = parent->features->first(); parent->features->more(i);
+                i = parent->features->next(i)) {
+               Feature feature = parent->features->nth(i);
+               if (is_attribute(feature)) {
+                   attributes.push_back(dynamic_cast<attr_class *>(feature));
+               }
+           }
+       },
+       get_parents(const_cast<CgenNode *>(this)));
+   return attributes;
+}
+
+void CgenNode::code_attributes(ostream &s) const {
+  for (auto *attribute : get_attributes()) {
+    s << WORD;
+    Symbol type = attribute->type_decl;
+    if (type == Int) {
+      inttable.lookup_string("0")->code_ref(s);
+    } else if (type == Bool) {
+      falsebool.code_ref(s);
+    } else if (type == Str) {
+      stringtable.lookup_string("")->code_ref(s);
+    } else {
+      s << '0' << "\t# void";
+    }
+    s << endl;
+  }
 }
 
 void CgenNode::code_dispatch_table(ostream &s) const {
