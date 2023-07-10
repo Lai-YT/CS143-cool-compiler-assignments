@@ -515,6 +515,48 @@ void list_map(std::function<void(T*)>f, List<T> *l)
 
 //////////////////////////////////////////////////////////////////////////////
 //
+//  Utilities
+//
+//////////////////////////////////////////////////////////////////////////////
+
+
+static int is_method(const Feature f) {
+  return !!dynamic_cast<method_class *>(f);
+}
+
+static int is_attribute(const Feature f) {
+  return !!dynamic_cast<attr_class *>(f);
+}
+
+//
+// Returns a vector which contains the nodes in nds, sorted in ascending order
+// with classtag.
+//
+static std::vector<CgenNode *> sort_list_with_classtag_as_vector(
+    List<CgenNode> *nds) {
+  auto nodes = std::vector<CgenNode *>{};
+  list_map<CgenNode>([&nodes](CgenNode *nd) { nodes.push_back(nd); }, nds);
+  std::sort(nodes.begin(), nodes.end(), [](CgenNode *a, CgenNode *b) {
+      return a->get_classtag() < b->get_classtag();
+  });
+  return nodes;
+}
+
+//
+// Object will be the first parent. nd itself is excluded.
+//
+static List<CgenNode>* get_parents(CgenNode *nd) {
+  nd = nd->get_parentnd();
+  List<CgenNode>* parents = NULL;
+  while (nd->name != No_class) {
+    parents = new List(nd, parents);
+    nd = nd->get_parentnd();
+  }
+  return parents;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+//
 //  CgenClassTable methods
 //
 //////////////////////////////////////////////////////////////////////////////
@@ -642,20 +684,6 @@ void CgenClassTable::code_prototype_objects() {
 }
 
 //
-// Returns a vector which contains the nodes in nds, sorted in ascending order
-// with classtag.
-//
-static std::vector<CgenNode *> sort_list_with_classtag_as_vector(
-    List<CgenNode> *nds) {
-  auto nodes = std::vector<CgenNode *>{};
-  list_map<CgenNode>([&nodes](CgenNode *nd) { nodes.push_back(nd); }, nds);
-  std::sort(nodes.begin(), nodes.end(), [](CgenNode *a, CgenNode *b) {
-      return a->get_classtag() < b->get_classtag();
-  });
-  return nodes;
-}
-
-//
 // At index (classtag) ∗ 4 contains a pointer to a String object containing
 // the name of the class associated.
 //
@@ -684,6 +712,26 @@ void CgenClassTable::code_class_object_table() {
     str << WORD << nd->name << PROTOBJ_SUFFIX << endl;
     str << WORD << nd->name << CLASSINIT_SUFFIX << endl;
   }
+}
+
+//
+// A dispatch table of class C labels all the methods it has in the form
+// "C.method".
+//
+void CgenClassTable::code_dispatch_tables() {
+  list_map<CgenNode>(
+      [this](CgenNode *nd) {
+          str << nd->name << DISPTAB_SUFFIX << LABEL;
+          // Methods of parents are inherited, so we have to go all the way up
+          // to Object and emit their code.
+          // NOTE: Methods of Object should be labelled first, nd being the
+          // last.
+          list_map<CgenNode>(
+              [this](CgenNode *parent) { parent->code_dispatch_table(str); },
+              get_parents(nd));
+          nd->code_dispatch_table(str);
+      },
+      nds);
 }
 
 CgenClassTable::CgenClassTable(Classes classes, ostream& s) : nds(NULL) , str(s)
@@ -913,6 +961,9 @@ void CgenClassTable::code()
   if (cgen_debug) cout << "coding class object table" << endl;
   code_class_object_table();
 
+  if (cgen_debug) cout << "coding dispatch tables" << endl;
+  code_dispatch_tables();
+
   if (cgen_debug) cout << "coding global text" << endl;
   code_global_text();
 
@@ -983,7 +1034,7 @@ void CgenNode::set_classtag() {
    }
 }
 
-void CgenNode::code_prototype_object(ostream &s) {
+void CgenNode::code_prototype_object(ostream &s) const {
    if (cgen_debug) {
     cout << '\t' << name << endl;
    }
@@ -993,6 +1044,18 @@ void CgenNode::code_prototype_object(ostream &s) {
    s << WORD << (DEFAULT_OBJFIELDS + 0) << " # TODO: number of attributes" << endl;
    s << WORD; emit_disptable_ref(name, s); s << endl;
    s << "# TODO: attributes" << endl;
+}
+
+void CgenNode::code_dispatch_table(ostream &s) const {
+   if (cgen_debug) {
+    cout << '\t' << name << endl;
+   }
+   for (int i = features->first(); features->more(i); i = features->next(i)) {
+    const Feature feature = features->nth(i);
+    if (is_method(feature)) {
+      s << WORD << name << METHOD_SEP << feature->get_name() << endl;
+    }
+   }
 }
 
 //******************************************************************
