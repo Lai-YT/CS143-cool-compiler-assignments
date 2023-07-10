@@ -33,6 +33,7 @@ private:
    void code_constants();
    void code_prototype_objects();
    void code_class_name_table();
+   void code_class_object_table();
 
 // The following creates an inheritance graph from
 // a list of classes.  The graph is implemented as

@@ -656,11 +656,31 @@ void CgenClassTable::code_class_name_table() {
   });
 
   // emit code
-  str << CLASSNAMETAB << ':' << endl;
+  str << CLASSNAMETAB << LABEL;
   for (auto *nd : nodes) {
     str << WORD;
     stringtable.lookup_string(nd->name->get_string())->code_ref(str);
     str << endl;
+  }
+}
+
+// At index (classtag) * 8 contains a pointer to the prototype object and at
+// index (classtag) * 8 + 4 contains a pointer to the initialization method for
+// that class.
+void CgenClassTable::code_class_object_table() {
+  // The order of nodes in `nds` doesn't necessarily follows their classtags,
+  // which means we need to sort them first.
+  auto nodes = std::vector<CgenNode *>{};
+  list_map<CgenNode>([&nodes](CgenNode *nd) { nodes.push_back(nd); }, nds);
+  std::sort(nodes.begin(), nodes.end(), [](CgenNode *a, CgenNode *b) {
+      return a->get_classtag() < b->get_classtag();
+  });
+
+  // emit code
+  str << CLASSOBJTAB << LABEL;
+  for (auto *nd : nodes) {
+    str << WORD << nd->name << PROTOBJ_SUFFIX << endl;
+    str << WORD << nd->name << CLASSINIT_SUFFIX << endl;
   }
 }
 
@@ -887,6 +907,9 @@ void CgenClassTable::code()
 
   if (cgen_debug) cout << "coding class name table" << endl;
   code_class_name_table();
+
+  if (cgen_debug) cout << "coding class object table" << endl;
+  code_class_object_table();
 
   if (cgen_debug) cout << "coding global text" << endl;
   code_global_text();
