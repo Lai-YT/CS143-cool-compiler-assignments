@@ -721,13 +721,6 @@ void CgenClassTable::code_dispatch_tables() {
   list_map<CgenNode>(
       [this](CgenNode *nd) {
           str << nd->name << DISPTAB_SUFFIX << LABEL;
-          // Methods of parents are inherited, so we have to go all the way up
-          // to Object and emit their code.
-          // NOTE: Methods of Object should be labelled first, nd being the
-          // last.
-          list_map<CgenNode>(
-              [this](CgenNode *parent) { parent->code_dispatch_table(str); },
-              get_parents(nd));
           nd->code_dispatch_table(str);
       },
       nds);
@@ -746,6 +739,7 @@ CgenClassTable::CgenClassTable(Classes classes, ostream& s) : nds(NULL) , str(s)
    install_basic_classes();
    install_classes(classes);
    build_inheritance_tree();
+   build_dispatch_layouts();
 
    code();
    exitscope();
@@ -921,6 +915,22 @@ void CgenClassTable::set_relations(CgenNodeP nd)
   parent_node->add_child(nd);
 }
 
+//
+// Handles the method dispatch layout with overriden.
+//
+// Must be called after the relations are set up.
+//
+void CgenClassTable::build_dispatch_layouts() {
+  // Since we didn't keep the root node, we need a linear search.
+  // The root node will be Object.
+  for (List<CgenNode> *l = nds; l; l = l->tl()) {
+    if (l->hd()->name == Object) {
+        l->hd()->build_dispatch_layout();
+        break;
+    }
+  }
+}
+
 void CgenNode::add_child(CgenNodeP n)
 {
   children = new List<CgenNode>(n,children);
@@ -933,7 +943,38 @@ void CgenNode::set_parentnd(CgenNodeP p)
   parentnd = p;
 }
 
+//
+// Builds the method dispatch layout of the node and its children.
+//
+void CgenNode::build_dispatch_layout() {
+  // The derived class first copies the dispatch layout from it parent,
+  // override some methods by looking it up from the offsets and change the
+  // latest implementor.
+  dispatch_layout = get_parentnd()->dispatch_layout;
+  dispatch_offsets = get_parentnd()->dispatch_offsets;
+  for (int i = features->first(); features->more(i); i = features->next(i)) {
+    const Feature feature = features->nth(i);
+    if (!is_method(feature)) {
+      continue;
+    }
+    // This is an override, change the implementor
+    if (dispatch_offsets.count(feature->get_name())) {
+      const int offset = dispatch_offsets.at(feature->get_name());
+      dispatch_layout.at(offset).first = this->name;
+    } else {
+      // New method, add into the layout and record the offset
+      dispatch_layout.emplace_back(this->name, feature->get_name());
+      dispatch_offsets.emplace(feature->get_name(), dispatch_layout.size() - 1);
+    }
+  }
 
+  // Build recursively on the tree struture in a breath-first way.
+  list_map(std::function<void(CgenNode *)>{[](CgenNode *child) {
+               child->build_dispatch_layout();
+           }},  // an explicit function construct to resolve ambiguous overload
+                // selection
+           children);
+}
 
 void CgenClassTable::code()
 {
@@ -1059,6 +1100,12 @@ std::vector<attr_class *> CgenNode::get_attributes() const {
            }
        },
        get_parents(this));
+   for (int i = features->first(); features->more(i); i = features->next(i)) {
+    Feature feature = features->nth(i);
+    if (is_attribute(feature)) {
+      attributes.push_back(dynamic_cast<attr_class *>(feature));
+    }
+   }
    return attributes;
 }
 
@@ -1080,15 +1127,14 @@ void CgenNode::code_attributes(ostream &s) const {
 }
 
 void CgenNode::code_dispatch_table(ostream &s) const {
-   if (cgen_debug) {
+  if (cgen_debug) {
     cout << '\t' << name << endl;
-   }
-   for (int i = features->first(); features->more(i); i = features->next(i)) {
-    const Feature feature = features->nth(i);
-    if (is_method(feature)) {
-      s << WORD << name << METHOD_SEP << feature->get_name() << endl;
-    }
-   }
+  }
+  for (auto [implementor, method] : dispatch_layout) {
+    s << WORD;
+    emit_method_ref(implementor, method, s);
+    s << endl;
+  }
 }
 
 //******************************************************************

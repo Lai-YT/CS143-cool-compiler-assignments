@@ -1,5 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 #include "emit.h"
 #include "cool-tree.h"
@@ -47,6 +49,8 @@ private:
    void install_classes(Classes cs);
    void build_inheritance_tree();
    void set_relations(CgenNodeP nd);
+
+   void build_dispatch_layouts();
 public:
    CgenClassTable(Classes, ostream& str);
    void code();
@@ -64,7 +68,15 @@ private:
    int classtag = -1;
    void set_classtag();
 
-public:
+   // For methods to be overridable while keeping the offset of such method as
+   // same as its parent, we use a vector to represent the layout of the methods
+   // and a map to record the offset of methods for fast looking ups.
+   std::vector<std::pair<Symbol /* implementor*/, Symbol /* method name */>>
+       dispatch_layout;
+   std::unordered_map<Symbol /* method name */, int /* offset */>
+       dispatch_offsets;
+
+  public:
    CgenNode(Class_ c,
             Basicness bstatus,
             CgenClassTableP class_table);
@@ -74,6 +86,8 @@ public:
    void set_parentnd(CgenNodeP p);
    CgenNodeP get_parentnd() const { return parentnd; }
    int basic() { return (basic_status == Basic); }
+
+   void build_dispatch_layout();
 
    int get_classtag() const { return classtag; }
    std::vector<attr_class *> get_attributes() const;
