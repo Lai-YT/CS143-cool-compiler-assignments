@@ -519,13 +519,18 @@ void list_map(std::function<void(T*)>f, List<T> *l)
 //
 //////////////////////////////////////////////////////////////////////////////
 
-
-static bool is_method(const Feature f) {
-  return !!dynamic_cast<method_class *>(f);
+//
+// Returns nullptr if f can't be safely converted into a method.
+//
+static method_class *as_method(const Feature f) {
+  return dynamic_cast<method_class *>(f);
 }
 
-static bool is_attribute(const Feature f) {
-  return !!dynamic_cast<attr_class *>(f);
+//
+// Returns nullptr if f can't be safely converted into an attribute.
+//
+static attr_class *as_attribute(const Feature f) {
+  return dynamic_cast<attr_class *>(f);
 }
 
 //
@@ -977,19 +982,18 @@ void CgenNode::build_dispatch_layout() {
   dispatch_layout = get_parentnd()->dispatch_layout;
   dispatch_offsets = get_parentnd()->dispatch_offsets;
   for (int i = features->first(); features->more(i); i = features->next(i)) {
-    const Feature feature = features->nth(i);
-    if (!is_method(feature)) {
+    auto *method = as_method(features->nth(i));
+    if (!method) {
       continue;
     }
     // This is an override, change the implementor
-    if (dispatch_offsets.count(feature->get_name())) {
-      const int offset = dispatch_offsets.at(feature->get_name());
+    if (dispatch_offsets.count(method->name)) {
+      const int offset = dispatch_offsets.at(method->name);
       dispatch_layout.at(offset).first = this->name;
     } else {
       // New method, add into the layout and record the offset
-      dispatch_layout.emplace_back(this->name,
-                                   dynamic_cast<method_class *>(feature));
-      dispatch_offsets.emplace(feature->get_name(), dispatch_layout.size() - 1);
+      dispatch_layout.emplace_back(this->name, method);
+      dispatch_offsets.emplace(method->name, dispatch_layout.size() - 1);
     }
   }
 
@@ -1011,13 +1015,12 @@ void CgenNode::build_attribute_layout() {
   attribute_offsets = get_parentnd()->attribute_offsets;
 
   for (int i = features->first(); features->more(i); i = features->next(i)) {
-    const Feature feature = features->nth(i);
-    if (!is_attribute(feature)) {
+    auto *attribute = as_attribute(features->nth(i));
+    if (!attribute) {
       continue;
     }
-    attribute_layout.emplace_back(this->name,
-                                  dynamic_cast<attr_class *>(feature));
-    attribute_offsets.emplace(feature->get_name(), attribute_layout.size() - 1);
+    attribute_layout.emplace_back(this->name, attribute);
+    attribute_offsets.emplace(attribute->name, attribute_layout.size() - 1);
   }
 
   // Build recursively on the tree struture in a breath-first way.
