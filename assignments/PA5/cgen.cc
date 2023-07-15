@@ -520,11 +520,11 @@ void list_map(std::function<void(T*)>f, List<T> *l)
 //////////////////////////////////////////////////////////////////////////////
 
 
-static int is_method(const Feature f) {
+static bool is_method(const Feature f) {
   return !!dynamic_cast<method_class *>(f);
 }
 
-static int is_attribute(const Feature f) {
+static bool is_attribute(const Feature f) {
   return !!dynamic_cast<attr_class *>(f);
 }
 
@@ -726,6 +726,15 @@ void CgenClassTable::code_dispatch_tables() {
       nds);
 }
 
+void CgenClassTable::code_class_inits() {
+  list_map<CgenNode>(
+      [this](CgenNode *nd) {
+          str << nd->name << CLASSINIT_SUFFIX << LABEL;
+          nd->code_class_init(str);
+      },
+      nds);
+}
+
 CgenClassTable::CgenClassTable(Classes classes, ostream& s) : nds(NULL) , str(s)
 {
   //  NOTE: the reference compiler uses these three tags for basic class,
@@ -740,6 +749,7 @@ CgenClassTable::CgenClassTable(Classes classes, ostream& s) : nds(NULL) , str(s)
    install_classes(classes);
    build_inheritance_tree();
    build_dispatch_layouts();
+   build_attribute_layouts();
 
    code();
    exitscope();
@@ -931,6 +941,20 @@ void CgenClassTable::build_dispatch_layouts() {
   }
 }
 
+//
+// Must be called after the relations are set up.
+//
+void CgenClassTable::build_attribute_layouts() {
+  // Since we didn't keep the root node, we need a linear search.
+  // The root node will be Object.
+  for (List<CgenNode> *l = nds; l; l = l->tl()) {
+    if (l->hd()->name == Object) {
+        l->hd()->build_attribute_layout();
+        break;
+    }
+  }
+}
+
 void CgenNode::add_child(CgenNodeP n)
 {
   children = new List<CgenNode>(n,children);
@@ -976,6 +1000,32 @@ void CgenNode::build_dispatch_layout() {
            children);
 }
 
+//
+// Builds the attribute layout of the node and its children.
+//
+void CgenNode::build_attribute_layout() {
+  // The derived class simply copies and extends the layout of its parent since
+  // attributes are not allowed to be overriden.
+  attribute_layout = get_parentnd()->attribute_layout;
+  attribute_offsets = get_parentnd()->attribute_offsets;
+
+  for (int i = features->first(); features->more(i); i = features->next(i)) {
+    const Feature feature = features->nth(i);
+    if (!is_attribute(feature)) {
+      continue;
+    }
+    attribute_layout.emplace_back(this->name, feature->get_name());
+    attribute_offsets.emplace(feature->get_name(), attribute_layout.size() - 1);
+  }
+
+  // Build recursively on the tree struture in a breath-first way.
+  list_map(std::function<void(CgenNode *)>{[](CgenNode *child) {
+               child->build_attribute_layout();
+           }},  // an explicit function construct to resolve ambiguous overload
+                // selection
+           children);
+}
+
 void CgenClassTable::code()
 {
   if (cgen_debug) cout << "coding global data" << endl;
@@ -1012,6 +1062,8 @@ void CgenClassTable::code()
 //                   - the class methods
 //                   - etc...
 
+  if (cgen_debug) cout << "coding object initializers" << endl;
+  code_class_inits();
 }
 
 
@@ -1135,6 +1187,64 @@ void CgenNode::code_dispatch_table(ostream &s) const {
     emit_method_ref(implementor, method, s);
     s << endl;
   }
+}
+
+//
+// Emit initialization code of the parents first, then self.
+//
+void CgenNode::code_class_init(ostream& s) const {
+  // Before calling the init of parent, save the frame and self pointers and the
+  // return address since we're calling another function as a caller.
+  // | ...  | <- FP
+  // | ...  |
+  //    .
+  //    .
+  //    .
+  // | FP   |
+  // | SELF |
+  // | RA   |
+  // | ...  | <- SP
+  emit_addiu(SP, SP, -1 /* stack grows from high to low */ * WORD_SIZE * 3, s);
+  emit_store(FP, 3, SP, s);
+  emit_store(SELF, 2, SP, s);
+  emit_store(RA, 1, SP, s);
+  // Adjust the frame pointer to point to the return address, which is now on
+  // the top of the stack (one word above sp).
+  emit_addiu(FP, SP, WORD_SIZE, s);
+  // XXX: I' not sure why we have to move between ACC and SELF before and after the init.
+  // The callee who calls the current init function passes the self pointer in
+  // ACC, so we restore that. ACC is used in computations and will be
+  // overwritten.
+  emit_move(SELF, ACC, s);
+  // Now do the initialization of the parent.
+  if (parent != No_class) {
+    s << JAL;  emit_init_ref(parent, s);  s << endl;
+  }
+  for (int i = features->first(); features->more(i); i = features->next(i)) {
+    if (!is_attribute(features->nth(i))) {
+      continue;
+    }
+    auto* attribute = dynamic_cast<attr_class*>(features->nth(i));
+    // We don't have to init attribute that doesn't have an init expression
+    // since it's already set with default value in the prototype.
+    if (!attribute->init->is_no_expr()) {
+      s << "# TODO: code expression" << endl;
+      attribute->init->code(s);
+      emit_store(ACC, DEFAULT_OBJFIELDS + attribute_offsets.at(attribute->name),
+                 SELF, s);
+    }
+  }
+  //
+  // Registers and stack are preserved after the init.
+  //
+  // Restore ACC to be SELF.
+  emit_move(ACC, SELF, s);
+  // Restore the stack.
+  emit_load(FP, 3, SP, s);
+  emit_load(SELF, 2, SP, s);
+  emit_load(RA, 1, SP, s);
+  emit_addiu(SP, SP, WORD_SIZE * 3, s);
+  emit_jalr(RA, s);
 }
 
 //******************************************************************

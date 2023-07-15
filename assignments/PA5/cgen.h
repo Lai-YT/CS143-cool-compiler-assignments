@@ -38,6 +38,7 @@ private:
    void code_class_name_table();
    void code_class_object_table();
    void code_dispatch_tables();
+   void code_class_inits();
 
 // The following creates an inheritance graph from
 // a list of classes.  The graph is implemented as
@@ -51,6 +52,7 @@ private:
    void set_relations(CgenNodeP nd);
 
    void build_dispatch_layouts();
+   void build_attribute_layouts();
 public:
    CgenClassTable(Classes, ostream& str);
    void code();
@@ -68,13 +70,23 @@ private:
    int classtag = -1;
    void set_classtag();
 
+   //
    // For methods to be overridable while keeping the offset of such method as
    // same as its parent, we use a vector to represent the layout of the methods
    // and a map to record the offset of methods for fast looking ups.
+   //
+
+   // All methods of the class in the order of their offsets.
    std::vector<std::pair<Symbol /* implementor*/, Symbol /* method name */>>
        dispatch_layout;
    std::unordered_map<Symbol /* method name */, int /* offset */>
        dispatch_offsets;
+
+   // All attributes of the class in the order of their offsets.
+   std::vector<std::pair<Symbol /* implementor*/, Symbol /* method name */>>
+       attribute_layout;
+   std::unordered_map<Symbol /* attribute name */, int /* offset */>
+       attribute_offsets;
 
   public:
    CgenNode(Class_ c,
@@ -88,12 +100,14 @@ private:
    int basic() { return (basic_status == Basic); }
 
    void build_dispatch_layout();
+   void build_attribute_layout();
 
    int get_classtag() const { return classtag; }
    std::vector<attr_class *> get_attributes() const;
    void code_prototype_object(ostream&) const;
    void code_attributes(ostream&) const;
    void code_dispatch_table(ostream&) const;
+   void code_class_init(ostream&) const;
 };
 
 class BoolConst
