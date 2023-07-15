@@ -987,7 +987,8 @@ void CgenNode::build_dispatch_layout() {
       dispatch_layout.at(offset).first = this->name;
     } else {
       // New method, add into the layout and record the offset
-      dispatch_layout.emplace_back(this->name, feature->get_name());
+      dispatch_layout.emplace_back(this->name,
+                                   dynamic_cast<method_class *>(feature));
       dispatch_offsets.emplace(feature->get_name(), dispatch_layout.size() - 1);
     }
   }
@@ -1014,7 +1015,8 @@ void CgenNode::build_attribute_layout() {
     if (!is_attribute(feature)) {
       continue;
     }
-    attribute_layout.emplace_back(this->name, feature->get_name());
+    attribute_layout.emplace_back(this->name,
+                                  dynamic_cast<attr_class *>(feature));
     attribute_offsets.emplace(feature->get_name(), attribute_layout.size() - 1);
   }
 
@@ -1134,35 +1136,13 @@ void CgenNode::code_prototype_object(ostream &s) const {
    s << name << PROTOBJ_SUFFIX << LABEL;
    s << WORD << classtag << endl;
    int number_of_attributes = 0;
-   s << WORD << (DEFAULT_OBJFIELDS + get_attributes().size()) << endl;
+   s << WORD << (DEFAULT_OBJFIELDS + attribute_layout.size()) << endl;
    s << WORD;  emit_disptable_ref(name, s); s << endl;
    code_attributes(s);
 }
 
-std::vector<attr_class *> CgenNode::get_attributes() const {
-   auto attributes = std::vector<attr_class *>{};
-   list_map<CgenNode>(
-       [&attributes](CgenNode *parent) {
-           for (int i = parent->features->first(); parent->features->more(i);
-                i = parent->features->next(i)) {
-               Feature feature = parent->features->nth(i);
-               if (is_attribute(feature)) {
-                   attributes.push_back(dynamic_cast<attr_class *>(feature));
-               }
-           }
-       },
-       get_parents(this));
-   for (int i = features->first(); features->more(i); i = features->next(i)) {
-    Feature feature = features->nth(i);
-    if (is_attribute(feature)) {
-      attributes.push_back(dynamic_cast<attr_class *>(feature));
-    }
-   }
-   return attributes;
-}
-
 void CgenNode::code_attributes(ostream &s) const {
-  for (auto *attribute : get_attributes()) {
+  for (auto [_, attribute] : attribute_layout) {
     s << WORD;
     Symbol type = attribute->type_decl;
     if (type == Int) {
@@ -1184,7 +1164,7 @@ void CgenNode::code_dispatch_table(ostream &s) const {
   }
   for (auto [implementor, method] : dispatch_layout) {
     s << WORD;
-    emit_method_ref(implementor, method, s);
+    emit_method_ref(implementor, method->name, s);
     s << endl;
   }
 }
@@ -1220,11 +1200,12 @@ void CgenNode::code_class_init(ostream& s) const {
   if (parent != No_class) {
     s << JAL;  emit_init_ref(parent, s);  s << endl;
   }
-  for (int i = features->first(); features->more(i); i = features->next(i)) {
-    if (!is_attribute(features->nth(i))) {
+  for (auto [implementor, attribute] : attribute_layout) {
+    if (implementor != name) {
+      // Those not implemented by the current class are initialized by the
+      // parents,
       continue;
     }
-    auto* attribute = dynamic_cast<attr_class*>(features->nth(i));
     // We don't have to init attribute that doesn't have an init expression
     // since it's already set with default value in the prototype.
     if (!attribute->init->is_no_expr()) {

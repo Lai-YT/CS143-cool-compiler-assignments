@@ -77,13 +77,13 @@ private:
    //
 
    // All methods of the class in the order of their offsets.
-   std::vector<std::pair<Symbol /* implementor*/, Symbol /* method name */>>
+   std::vector<std::pair<Symbol /* implementor*/, method_class *>>
        dispatch_layout;
    std::unordered_map<Symbol /* method name */, int /* offset */>
        dispatch_offsets;
 
    // All attributes of the class in the order of their offsets.
-   std::vector<std::pair<Symbol /* implementor*/, Symbol /* method name */>>
+   std::vector<std::pair<Symbol /* implementor*/, attr_class *>>
        attribute_layout;
    std::unordered_map<Symbol /* attribute name */, int /* offset */>
        attribute_offsets;
@@ -103,7 +103,6 @@ private:
    void build_attribute_layout();
 
    int get_classtag() const { return classtag; }
-   std::vector<attr_class *> get_attributes() const;
    void code_prototype_object(ostream&) const;
    void code_attributes(ostream&) const;
    void code_dispatch_table(ostream&) const;
