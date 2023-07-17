@@ -316,6 +316,12 @@ static void emit_branch(int l, ostream& s)
   s << endl;
 }
 
+static int stack_depth = 0;
+
+void assert_empty_stack() {
+  assert(stack_depth == 0);
+}
+
 //
 // Push a register on the stack. The stack grows towards smaller addresses.
 //
@@ -323,6 +329,18 @@ static void emit_push(char *reg, ostream& str)
 {
   emit_store(reg,0,SP,str);
   emit_addiu(SP,SP,-4,str);
+  ++stack_depth;
+}
+
+//
+// Pop the stack to a register. The stack shrinks towards larger addresses.
+//
+static void emit_pop(char *reg, ostream& str)
+{
+  // SP points to one above top, so adjust SP first.
+  emit_addiu(SP, SP, WORD_SIZE, str);
+  emit_load(reg, 0, SP, str);
+  --stack_depth;
 }
 
 //
@@ -347,8 +365,7 @@ static void emit_test_collector(ostream &s)
   emit_move(ACC, SP, s); // stack end
   emit_move(A1, ZERO, s); // allocate nothing
   s << JAL << gc_collect_names[cgen_Memmgr] << endl;
-  emit_addiu(SP,SP,4,s);
-  emit_load(ACC,0,SP,s);
+  emit_pop(ACC, s);
 }
 
 static void emit_gc_check(char *source, ostream &s)
@@ -1069,6 +1086,8 @@ void CgenClassTable::code()
 
   if (cgen_debug) cout << "coding object initializers" << endl;
   code_class_inits();
+
+  assert_empty_stack();
 }
 
 
@@ -1175,34 +1194,65 @@ void CgenNode::code_dispatch_table(ostream &s) const {
 //
 // Emit initialization code of the parents first, then self.
 //
-void CgenNode::code_class_init(ostream& s) const {
-  // Before calling the init of parent, save the frame and self pointers and the
-  // return address since we're calling another function as a caller.
-  // | ...  | <- FP
-  // | ...  |
-  //    .
-  //    .
-  //    .
-  // | FP   |
-  // | SELF |
-  // | RA   |
-  // | ...  | <- SP
-  emit_addiu(SP, SP, -1 /* stack grows from high to low */ * WORD_SIZE * 3, s);
-  emit_store(FP, 3, SP, s);
-  emit_store(SELF, 2, SP, s);
-  emit_store(RA, 1, SP, s);
-  // Adjust the frame pointer to point to the return address, which is now on
-  // the top of the stack (one word above sp).
-  emit_addiu(FP, SP, WORD_SIZE, s);
-  // XXX: I' not sure why we have to move between ACC and SELF before and after the init.
-  // The callee who calls the current init function passes the self pointer in
-  // ACC, so we restore that. ACC is used in computations and will be
-  // overwritten.
+void CgenNode::code_class_init(ostream &s) const {
+  //
+  // Caller saved: SELF (temporaries), FP
+  // Callee saved: RA, SP
+  //
+
+  // So that we know FP + 4 is our first argument, FP + 8 is the second one, and
+  // NOTE: The frame pointer points to the top, not bottom of the frame.
+  // so on (although there's no argument in this case).
+  emit_move(FP, SP, s);
+
+  // Callee saved, from the perspective of called by child.
+  emit_push(RA, s);
+
+  //
+  // On entry:
+  // |   ...    | <- FP
+  // |   ...    |
+  //      .
+  //      .
+  //      .
+  // | OLD_SELF |
+  // |  OLD_FP  |
+  //   (no arg)
+  // |   ...    | <- SP
+  // ACC: SELF
+  //
+  // SELF is a special argument, which is always passed through ACC.
+  // Other arguments are passed with the stack, but in the init method, there's
+  // no any other arguments.
+  //
+
+  // Get our SELF pointer from ACC:
   emit_move(SELF, ACC, s);
-  // Now do the initialization of the parent.
+
+  // It might look a bit redundant to move SELF around, but that's because we
+  // got nothing else to do before calling the init method of parent.
+
+  // Caller saved, from the perspective of calling the parent.
+  emit_push(SELF, s);  // save some temporaries
+  emit_push(FP, s);
+  // We should push all arguments (exclude SELF) on to the stack, but there's no
+  // arguments in this case.
+
+  // Pass SELF through ACC.
+  emit_move(ACC, SELF, s);
+
+  // Now it's time to call the init method of the parent.
   if (parent != No_class) {
     s << JAL;  emit_init_ref(parent, s);  s << endl;
   }
+
+  // Restore caller saved:
+  // NOTE: In the class example, FP is caller-saved but restored by the callee,
+  // which looks awkward to me. I change it to fully caller-saved.
+  emit_pop(FP, s);
+  emit_pop(SELF, s);
+
+  // Emit code for our initialization:
   for (auto [implementor, attribute] : attribute_layout) {
     if (implementor != name) {
       // Those not implemented by the current class are initialized by the
@@ -1218,17 +1268,13 @@ void CgenNode::code_class_init(ostream& s) const {
                  SELF, s);
     }
   }
-  //
-  // Registers and stack are preserved after the init.
-  //
-  // Restore ACC to be SELF.
-  emit_move(ACC, SELF, s);
-  // Restore the stack.
-  emit_load(FP, 3, SP, s);
-  emit_load(SELF, 2, SP, s);
-  emit_load(RA, 1, SP, s);
-  emit_addiu(SP, SP, WORD_SIZE * 3, s);
-  emit_jalr(RA, s);
+
+  // Restore callee saved:
+  emit_pop(RA, s);
+  // We should pop all arguments to restore SP, but there's no arguments in this
+  // case.
+
+  emit_return(s);
 }
 
 //******************************************************************
