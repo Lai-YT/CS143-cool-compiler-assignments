@@ -78,6 +78,10 @@ Symbol get_name() const { return name; } \
 void dump_with_types(ostream&,int);
 
 
+#define method_EXTRAS                                    \
+void code(ostream&) const;
+
+
 #define Formal_EXTRAS                              \
 virtual void dump_with_types(ostream&,int) = 0;
 

@@ -25,7 +25,6 @@ private:
    int intclasstag;
    int boolclasstag;
 
-
 // The following methods emit code for
 // constants and global declarations.
 
@@ -39,6 +38,7 @@ private:
    void code_class_object_table();
    void code_dispatch_tables();
    void code_class_inits();
+   void code_class_methods();
 
 // The following creates an inheritance graph from
 // a list of classes.  The graph is implemented as
@@ -70,6 +70,7 @@ private:
    int classtag = -1;
    void set_classtag();
 
+  public:
    //
    // For methods to be overridable while keeping the offset of such method as
    // same as its parent, we use a vector to represent the layout of the methods
@@ -88,7 +89,6 @@ private:
    std::unordered_map<Symbol /* attribute name */, int /* offset */>
        attribute_offsets;
 
-  public:
    CgenNode(Class_ c,
             Basicness bstatus,
             CgenClassTableP class_table);
@@ -107,6 +107,7 @@ private:
    void code_attributes(ostream&) const;
    void code_dispatch_table(ostream&) const;
    void code_class_init(ostream&) const;
+   void code_class_method(ostream&) const;
 };
 
 class BoolConst

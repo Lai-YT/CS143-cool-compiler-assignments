@@ -316,12 +316,6 @@ static void emit_branch(int l, ostream& s)
   s << endl;
 }
 
-static int stack_depth = 0;
-
-void assert_empty_stack() {
-  assert(stack_depth == 0);
-}
-
 //
 // Push a register on the stack. The stack grows towards smaller addresses.
 //
@@ -329,7 +323,6 @@ static void emit_push(char *reg, ostream& str)
 {
   emit_store(reg,0,SP,str);
   emit_addiu(SP,SP,-4,str);
-  ++stack_depth;
 }
 
 //
@@ -340,7 +333,6 @@ static void emit_pop(char *reg, ostream& str)
   // SP points to one above top, so adjust SP first.
   emit_addiu(SP, SP, WORD_SIZE, str);
   emit_load(reg, 0, SP, str);
-  --stack_depth;
 }
 
 //
@@ -757,6 +749,16 @@ void CgenClassTable::code_class_inits() {
       nds);
 }
 
+void CgenClassTable::code_class_methods() {
+  list_map<CgenNode>(
+      [this](CgenNode *nd) {
+          if (!nd->basic()) {
+              nd->code_class_method(str);
+          }
+      },
+      nds);
+}
+
 CgenClassTable::CgenClassTable(Classes classes, ostream& s) : nds(NULL) , str(s)
 {
   //  NOTE: the reference compiler uses these three tags for basic class,
@@ -1087,7 +1089,8 @@ void CgenClassTable::code()
   if (cgen_debug) cout << "coding object initializers" << endl;
   code_class_inits();
 
-  assert_empty_stack();
+  if (cgen_debug) cout << "coding class methods" << endl;
+  code_class_methods();
 }
 
 
@@ -1191,22 +1194,33 @@ void CgenNode::code_dispatch_table(ostream &s) const {
   }
 }
 
+void CgenNode::code_class_method(ostream& s) const {
+  for (auto [implementor, method] : dispatch_layout) {
+    if (implementor == name) {
+      emit_method_ref(name, method->name, s);  s << LABEL;
+      method->code(s);
+    }
+  }
+}
+
 //
 // Emit initialization code of the parents first, then self.
 //
 void CgenNode::code_class_init(ostream &s) const {
   //
-  // Caller saved: SELF (temporaries), FP
-  // Callee saved: RA, SP
+  // Caller saved: ACC (temporaries, if any)
+  // Callee saved: RA, FP, SELF, SP
   //
+
+  // Callee saved, from the perspective of called by child.
+  emit_push(RA, s);
+  emit_push(FP, s);
+  emit_push(SELF, s);
 
   // So that we know FP + 4 is our first argument, FP + 8 is the second one, and
   // NOTE: The frame pointer points to the top, not bottom of the frame.
   // so on (although there's no argument in this case).
-  emit_move(FP, SP, s);
-
-  // Callee saved, from the perspective of called by child.
-  emit_push(RA, s);
+  emit_addiu(FP, SP, 3 * WORD_SIZE, s);
 
   //
   // On entry:
@@ -1232,9 +1246,6 @@ void CgenNode::code_class_init(ostream &s) const {
   // It might look a bit redundant to move SELF around, but that's because we
   // got nothing else to do before calling the init method of parent.
 
-  // Caller saved, from the perspective of calling the parent.
-  emit_push(SELF, s);  // save some temporaries
-  emit_push(FP, s);
   // We should push all arguments (exclude SELF) on to the stack, but there's no
   // arguments in this case.
 
@@ -1247,10 +1258,7 @@ void CgenNode::code_class_init(ostream &s) const {
   }
 
   // Restore caller saved:
-  // NOTE: In the class example, FP is caller-saved but restored by the callee,
-  // which looks awkward to me. I change it to fully caller-saved.
-  emit_pop(FP, s);
-  emit_pop(SELF, s);
+  // No temporaries.
 
   // Emit code for our initialization:
   for (auto [implementor, attribute] : attribute_layout) {
@@ -1270,10 +1278,50 @@ void CgenNode::code_class_init(ostream &s) const {
   }
 
   // Restore callee saved:
+  emit_pop(SELF, s);
+  // NOTE: In the class example, FP is caller-saved but restored by the callee,
+  // which looks awkward to me. I change it to fully callee-saved.
+  emit_pop(FP, s);
   emit_pop(RA, s);
   // We should pop all arguments to restore SP, but there's no arguments in this
   // case.
 
+  emit_return(s);
+}
+
+void method_class::code(ostream &s) const {
+  //
+  // Caller saved: ACC (temporaries, if any)
+  // Callee saved: RA, FP, SELF, SP
+  //
+
+  // Callee saved:
+  emit_push(RA, s);
+  emit_push(FP, s);
+  emit_push(SELF, s);
+
+  // FP + 4 is our first argument, FP + 8 is the second one, and so on.
+  emit_addiu(FP, SP, 3 * WORD_SIZE, s);
+
+  // SELF is passed through ACC.
+  emit_move(SELF, ACC, s);
+
+  // Execute the expressions inside the method.
+  expr->code(s);
+
+  // Note that the return value is in ACC.
+
+  // Restore callee saved:
+  emit_pop(SELF, s);
+  emit_pop(FP, s);
+  emit_pop(RA, s);
+
+  // Pops all arguments to restore SP.
+  for (int i = 0; i < formals->len(); i++) {
+    emit_pop(T1, s);
+  }
+
+  // return
   emit_return(s);
 }
 
