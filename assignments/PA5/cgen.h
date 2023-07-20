@@ -72,7 +72,6 @@ private:
    ClassTag class_tag = -1;
    void set_class_tag();
 
-  public:
    //
    // For methods to be overridable while keeping the offset of such method as
    // same as its parent, we use a vector to represent the layout of the methods
@@ -91,6 +90,7 @@ private:
    std::unordered_map<Symbol /* attribute name */, int /* offset */>
        attribute_offsets;
 
+  public:
    CgenNode(Class_ c,
             Basicness bstatus,
             CgenClassTableP class_table);
@@ -103,13 +103,15 @@ private:
 
    void build_dispatch_layout();
    void build_attribute_layout();
+   int get_attribute_offset(Symbol attribute) const;
+   int get_method_offset(Symbol method) const;
 
    ClassTag get_class_tag() const { return class_tag; }
    void code_prototype_object(ostream&) const;
    void code_attributes(ostream&) const;
    void code_dispatch_table(ostream&) const;
-   void code_class_init(ostream&) const;
-   void code_class_method(ostream&) const;
+   void code_class_init(ostream&, CgenClassTableP) const;
+   void code_class_method(ostream&, CgenClassTableP) const;
 };
 
 class BoolConst

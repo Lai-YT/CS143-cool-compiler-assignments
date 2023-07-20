@@ -44,6 +44,9 @@ typedef Expressions_class *Expressions;
 typedef list_node<Case> Cases_class;
 typedef Cases_class *Cases;
 
+class CgenClassTable;
+typedef CgenClassTable *CgenClassTableP;
+
 #define Program_EXTRAS                          \
 virtual void cgen(ostream&) = 0;		\
 virtual void dump_with_types(ostream&, int) = 0;
@@ -79,7 +82,7 @@ void dump_with_types(ostream&,int);
 
 
 #define method_EXTRAS                                    \
-void code(ostream&) const;
+void code(ostream&, CgenClassTableP) const;
 
 
 #define Formal_EXTRAS                              \
@@ -102,14 +105,14 @@ void dump_with_types(ostream& ,int);
 Symbol type;                                 \
 Symbol get_type() { return type; }           \
 Expression set_type(Symbol s) { type = s; return this; } \
-virtual void code(ostream&) = 0; \
+virtual void code(ostream&, CgenClassTableP) = 0; \
 virtual void dump_with_types(ostream&,int) = 0;  \
 void dump_type(ostream&, int);               \
 Expression_class() { type = (Symbol) NULL; } \
 virtual bool is_no_expr() const { return false; }
 
 #define Expression_SHARED_EXTRAS           \
-void code(ostream&); 			   \
+void code(ostream&, CgenClassTableP); 			   \
 void dump_with_types(ostream&,int);
 
 #define no_expr_EXTRAS \

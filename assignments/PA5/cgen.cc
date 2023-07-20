@@ -743,7 +743,7 @@ void CgenClassTable::code_class_inits() {
   list_map<CgenNode>(
       [this](CgenNode *nd) {
           str << nd->name << CLASSINIT_SUFFIX << LABEL;
-          nd->code_class_init(str);
+          nd->code_class_init(str, this);
       },
       nds);
 }
@@ -752,7 +752,7 @@ void CgenClassTable::code_class_methods() {
   list_map<CgenNode>(
       [this](CgenNode *nd) {
           if (!nd->basic()) {
-              nd->code_class_method(str);
+              nd->code_class_method(str, this);
           }
       },
       nds);
@@ -1049,6 +1049,14 @@ void CgenNode::build_attribute_layout() {
            children);
 }
 
+int CgenNode::get_attribute_offset(Symbol attribute) const {
+  return attribute_offsets.at(attribute);
+}
+
+int CgenNode::get_method_offset(Symbol method) const {
+  return dispatch_offsets.at(method);
+}
+
 void CgenClassTable::code()
 {
   if (cgen_debug) cout << "coding global data" << endl;
@@ -1193,11 +1201,11 @@ void CgenNode::code_dispatch_table(ostream &s) const {
   }
 }
 
-void CgenNode::code_class_method(ostream& s) const {
+void CgenNode::code_class_method(ostream &s, CgenClassTableP env) const {
   for (auto [implementor, method] : dispatch_layout) {
     if (implementor == name) {
       emit_method_ref(name, method->name, s);  s << LABEL;
-      method->code(s);
+      method->code(s, env);
     }
   }
 }
@@ -1205,7 +1213,7 @@ void CgenNode::code_class_method(ostream& s) const {
 //
 // Emit initialization code of the parents first, then self.
 //
-void CgenNode::code_class_init(ostream &s) const {
+void CgenNode::code_class_init(ostream &s, CgenClassTableP env) const {
   //
   // Caller saved: ACC (temporaries, if any)
   // Callee saved: RA, FP, SELF, SP
@@ -1270,7 +1278,7 @@ void CgenNode::code_class_init(ostream &s) const {
     // since it's already set with default value in the prototype.
     if (!attribute->init->is_no_expr()) {
       s << "# TODO: code expression" << endl;
-      attribute->init->code(s);
+      attribute->init->code(s, env);
       emit_store(ACC, DEFAULT_OBJFIELDS + attribute_offsets.at(attribute->name),
                  SELF, s);
     }
@@ -1288,7 +1296,7 @@ void CgenNode::code_class_init(ostream &s) const {
   emit_return(s);
 }
 
-void method_class::code(ostream &s) const {
+void method_class::code(ostream &s, CgenClassTableP env) const {
   //
   // Caller saved: ACC (temporaries, if any)
   // Callee saved: RA, FP, SELF, SP
@@ -1306,7 +1314,7 @@ void method_class::code(ostream &s) const {
   emit_move(SELF, ACC, s);
 
   // Execute the expressions inside the method.
-  expr->code(s);
+  expr->code(s, env);
 
   // Note that the return value is in ACC.
 
@@ -1334,58 +1342,84 @@ void method_class::code(ostream &s) const {
 //
 //*****************************************************************
 
-void assign_class::code(ostream &s) {
+void assign_class::code(ostream &s, CgenClassTableP env) {
 }
 
-void static_dispatch_class::code(ostream &s) {
+void static_dispatch_class::code(ostream &s, CgenClassTableP env) {
 }
 
-void dispatch_class::code(ostream &s) {
+void dispatch_class::code(ostream &s, CgenClassTableP env) {
+  // Evaluate and push the actuals.
+  for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
+    actual->nth(i)->code(s, env);  // the result value is always placed in ACC
+    emit_push(ACC, s);
+  }
+
+  // Evaluate the object in dispatch.
+  expr->code(s, env);
+
+  Symbol classname = expr->get_type();
+  // Pass SELF through ACC.
+  if (classname == SELF_TYPE) {
+    emit_move(ACC, SELF, s);
+  } else {
+    emit_partial_load_address(ACC, s);  emit_protobj_ref(classname, s);  s << endl;
+  }
+
+  // Locate the method.
+  emit_load(T1, DISPTABLE_OFFSET,
+            ACC,  // ACC now points to the SELF of the expr on dispatch
+            s);
+  emit_load(T1, env->lookup(type)->get_method_offset(name), T1,
+            s);
+
+  // Call the method.
+  emit_jalr(T1, s);
 }
 
-void cond_class::code(ostream &s) {
+void cond_class::code(ostream &s, CgenClassTableP env) {
 }
 
-void loop_class::code(ostream &s) {
+void loop_class::code(ostream &s, CgenClassTableP env) {
 }
 
-void typcase_class::code(ostream &s) {
+void typcase_class::code(ostream &s, CgenClassTableP env) {
 }
 
-void block_class::code(ostream &s) {
+void block_class::code(ostream &s, CgenClassTableP env) {
 }
 
-void let_class::code(ostream &s) {
+void let_class::code(ostream &s, CgenClassTableP env) {
 }
 
-void plus_class::code(ostream &s) {
+void plus_class::code(ostream &s, CgenClassTableP env) {
 }
 
-void sub_class::code(ostream &s) {
+void sub_class::code(ostream &s, CgenClassTableP env) {
 }
 
-void mul_class::code(ostream &s) {
+void mul_class::code(ostream &s, CgenClassTableP env) {
 }
 
-void divide_class::code(ostream &s) {
+void divide_class::code(ostream &s, CgenClassTableP env) {
 }
 
-void neg_class::code(ostream &s) {
+void neg_class::code(ostream &s, CgenClassTableP env) {
 }
 
-void lt_class::code(ostream &s) {
+void lt_class::code(ostream &s, CgenClassTableP env) {
 }
 
-void eq_class::code(ostream &s) {
+void eq_class::code(ostream &s, CgenClassTableP env) {
 }
 
-void leq_class::code(ostream &s) {
+void leq_class::code(ostream &s, CgenClassTableP env) {
 }
 
-void comp_class::code(ostream &s) {
+void comp_class::code(ostream &s, CgenClassTableP env) {
 }
 
-void int_const_class::code(ostream& s)
+void int_const_class::code(ostream &s, CgenClassTableP env)
 {
   //
   // Need to be sure we have an IntEntry *, not an arbitrary Symbol
@@ -1393,24 +1427,24 @@ void int_const_class::code(ostream& s)
   emit_load_int(ACC,inttable.lookup_string(token->get_string()),s);
 }
 
-void string_const_class::code(ostream& s)
+void string_const_class::code(ostream &s, CgenClassTableP env)
 {
   emit_load_string(ACC,stringtable.lookup_string(token->get_string()),s);
 }
 
-void bool_const_class::code(ostream& s)
+void bool_const_class::code(ostream &s, CgenClassTableP env)
 {
   emit_load_bool(ACC, BoolConst(val), s);
 }
 
-void new__class::code(ostream &s) {
+void new__class::code(ostream &s, CgenClassTableP env) {
 }
 
-void isvoid_class::code(ostream &s) {
+void isvoid_class::code(ostream &s, CgenClassTableP env) {
 }
 
-void no_expr_class::code(ostream &s) {
+void no_expr_class::code(ostream &s, CgenClassTableP env) {
 }
 
-void object_class::code(ostream &s) {
+void object_class::code(ostream &s, CgenClassTableP env) {
 }
