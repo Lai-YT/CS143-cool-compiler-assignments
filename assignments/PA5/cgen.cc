@@ -1438,6 +1438,12 @@ void bool_const_class::code(ostream &s, CgenClassTableP env)
 }
 
 void new__class::code(ostream &s, CgenClassTableP env) {
+  // 1. load the address of the prototype object
+  // 2. make a copy
+  // 3. init such object
+  emit_partial_load_address(ACC, s);  emit_protobj_ref(type_name, s);  s << endl;
+  s << JAL;  emit_method_ref(Object, ::copy, s);  s << endl;
+  s << JAL;  emit_init_ref(type_name, s);  s << endl;
 }
 
 void isvoid_class::code(ostream &s, CgenClassTableP env) {
