@@ -17,6 +17,8 @@ typedef CgenClassTable *CgenClassTableP;
 class CgenNode;
 typedef CgenNode *CgenNodeP;
 
+typedef unsigned ClassTag;
+
 class CgenClassTable : public SymbolTable<Symbol,CgenNode> {
 private:
    List<CgenNode> *nds;
@@ -66,9 +68,9 @@ private:
    List<CgenNode> *children;                  // Children of class
    Basicness basic_status;                    // `Basic' if class is basic
                                               // `NotBasic' otherwise
-   static int next_classtag;
-   int classtag = -1;
-   void set_classtag();
+   static ClassTag next_class_tag;
+   ClassTag class_tag = -1;
+   void set_class_tag();
 
   public:
    //
@@ -102,7 +104,7 @@ private:
    void build_dispatch_layout();
    void build_attribute_layout();
 
-   int get_classtag() const { return classtag; }
+   ClassTag get_class_tag() const { return class_tag; }
    void code_prototype_object(ostream&) const;
    void code_attributes(ostream&) const;
    void code_dispatch_table(ostream&) const;

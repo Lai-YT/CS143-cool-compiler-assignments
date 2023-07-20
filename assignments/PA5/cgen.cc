@@ -544,14 +544,13 @@ static attr_class *as_attribute(const Feature f) {
 
 //
 // Returns a vector which contains the nodes in nds, sorted in ascending order
-// with classtag.
+// with class_tag.
 //
-static std::vector<CgenNode *> sort_list_with_classtag_as_vector(
-    List<CgenNode> *nds) {
+static std::vector<CgenNode *> sort_list_with_class_tag(List<CgenNode> *nds) {
   auto nodes = std::vector<CgenNode *>{};
   list_map<CgenNode>([&nodes](CgenNode *nd) { nodes.push_back(nd); }, nds);
   std::sort(nodes.begin(), nodes.end(), [](CgenNode *a, CgenNode *b) {
-      return a->get_classtag() < b->get_classtag();
+      return a->get_class_tag() < b->get_class_tag();
   });
   return nodes;
 }
@@ -697,14 +696,14 @@ void CgenClassTable::code_prototype_objects() {
 }
 
 //
-// At index (classtag) ∗ 4 contains a pointer to a String object containing
+// At index (class_tag) ∗ 4 contains a pointer to a String object containing
 // the name of the class associated.
 //
 void CgenClassTable::code_class_name_table() {
   // NOTE: the order of nodes in `nds` doesn't necessarily follows their
   // classtags, which means we need to sort them first.
   str << CLASSNAMETAB << LABEL;
-  for (auto *nd : sort_list_with_classtag_as_vector(nds)) {
+  for (auto *nd : sort_list_with_class_tag(nds)) {
     str << WORD;
     stringtable.lookup_string(nd->name->get_string())->code_ref(str);
     str << endl;
@@ -712,8 +711,8 @@ void CgenClassTable::code_class_name_table() {
 }
 
 //
-// At index (classtag) * 8 contains a pointer to the prototype object and at
-// index (classtag) * 8 + 4 contains a pointer to the initialization method for
+// At index (class_tag) * 8 contains a pointer to the prototype object and at
+// index (class_tag) * 8 + 4 contains a pointer to the initialization method for
 // that class.
 //
 void CgenClassTable::code_class_object_table() {
@@ -721,7 +720,7 @@ void CgenClassTable::code_class_object_table() {
   // NOTE: The order of nodes in `nds` doesn't necessarily follows their
   // classtags, which means we need to sort them first.
   str << CLASSOBJTAB << LABEL;
-  for (auto *nd : sort_list_with_classtag_as_vector(nds)) {
+  for (auto *nd : sort_list_with_class_tag(nds)) {
     str << WORD << nd->name << PROTOBJ_SUFFIX << endl;
     str << WORD << nd->name << CLASSINIT_SUFFIX << endl;
   }
@@ -1113,7 +1112,7 @@ CgenNode::CgenNode(Class_ nd, Basicness bstatus, CgenClassTableP ct) :
    basic_status(bstatus)
 {
    stringtable.add_string(name->get_string());          // Add class name to string table
-   set_classtag();
+   set_class_tag();
 }
 
 // 0 ~ 5 are reserved for basic classes:
@@ -1123,27 +1122,27 @@ CgenNode::CgenNode(Class_ nd, Basicness bstatus, CgenClassTableP ct) :
 // 3: Int
 // 4: Bool
 // 5: String
-int CgenNode::next_classtag = 6;
+ClassTag CgenNode::next_class_tag = 6;
 
-void CgenNode::set_classtag() {
+void CgenNode::set_class_tag() {
    if (!basic()) {
     if (name == Main) {
-      classtag = 2;
+      class_tag = 2;
     } else {
-      classtag = next_classtag++;
+      class_tag = next_class_tag++;
     }
     return;
    }
    if (name == Object) {
-    classtag = 0;
+    class_tag = 0;
    } else if (name == IO) {
-    classtag = 1;
+    class_tag = 1;
    } else if (name == Int) {
-    classtag = 3;
+    class_tag = 3;
    } else if (name == Bool) {
-    classtag = 4;
+    class_tag = 4;
    } else if (name == Str) {
-    classtag = 5;
+    class_tag = 5;
    } else {
     // Non-generating classes fall into here, e.g., No_class.
     // It's okay that we ignore them.
@@ -1159,7 +1158,7 @@ void CgenNode::code_prototype_object(ostream &s) const {
    }
    s << WORD << -1 << endl;  // For GC
    s << name << PROTOBJ_SUFFIX << LABEL;
-   s << WORD << classtag << endl;
+   s << WORD << class_tag << endl;
    int number_of_attributes = 0;
    s << WORD << (DEFAULT_OBJFIELDS + attribute_layout.size()) << endl;
    s << WORD;  emit_disptable_ref(name, s); s << endl;
