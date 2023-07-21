@@ -758,8 +758,8 @@ void CgenClassTable::code_class_methods() {
       nds);
 }
 
-CgenClassTable::CgenClassTable(Classes classes, ostream& s) : nds(NULL) , str(s)
-{
+CgenClassTable::CgenClassTable(Classes classes, ostream &s)
+    : nds(NULL), str(s), local_table(new SymbolTable<Symbol, int>) {
   //  NOTE: the reference compiler uses these three tags for basic class,
   //  which is the reason why I choose them
    stringclasstag = 5 /* Change to your String class tag here */;
@@ -1205,7 +1205,10 @@ void CgenNode::code_class_method(ostream &s, CgenClassTableP env) const {
   for (auto [implementor, method] : dispatch_layout) {
     if (implementor == name) {
       emit_method_ref(name, method->name, s);  s << LABEL;
+      env->local_table->enterscope();
+      env->self_object = name;
       method->code(s, env);
+      env->local_table->exitscope();
     }
   }
 }
@@ -1277,9 +1280,8 @@ void CgenNode::code_class_init(ostream &s, CgenClassTableP env) const {
     // We don't have to init attribute that doesn't have an init expression
     // since it's already set with default value in the prototype.
     if (!attribute->init->is_no_expr()) {
-      s << "# TODO: code expression" << endl;
       attribute->init->code(s, env);
-      emit_store(ACC, DEFAULT_OBJFIELDS + attribute_offsets.at(attribute->name),
+      emit_store(ACC, DEFAULT_OBJFIELDS + get_attribute_offset(attribute->name),
                  SELF, s);
     }
   }
@@ -1312,6 +1314,11 @@ void method_class::code(ostream &s, CgenClassTableP env) const {
 
   // SELF is passed through ACC.
   emit_move(SELF, ACC, s);
+
+  for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
+    // Offset 0 is where the return address is, can't be a local.
+    env->local_table->addid(formals->nth(i)->get_name(), new int(i + 1));
+  }
 
   // Execute the expressions inside the method.
   expr->code(s, env);
@@ -1362,16 +1369,24 @@ void dispatch_class::code(ostream &s, CgenClassTableP env) {
   // Pass SELF through ACC.
   if (classname == SELF_TYPE) {
     emit_move(ACC, SELF, s);
+    classname = env->self_object;
+    if (cgen_debug) {
+      cout << "\tDispatching to SELF_TYPE, resolved as " << classname << endl;
+    }
   } else {
     emit_partial_load_address(ACC, s);  emit_protobj_ref(classname, s);  s << endl;
+    if (cgen_debug) {
+      cout << "\tDispatching to " << classname << endl;
+    }
   }
 
   // Locate the method.
-  emit_load(T1, DISPTABLE_OFFSET,
-            ACC,  // ACC now points to the SELF of the expr on dispatch
-            s);
-  emit_load(T1, env->lookup(type)->get_method_offset(name), T1,
-            s);
+  emit_load(T1, DISPTABLE_OFFSET, ACC /* self of expr */, s);
+  const int offset = env->lookup(classname)->get_method_offset(name);
+  emit_load(T1, offset, T1, s);
+  if (cgen_debug) {
+    cout << "\tMethod " << name << " at offset " << offset << endl;
+  }
 
   // Call the method.
   emit_jalr(T1, s);
@@ -1441,12 +1456,16 @@ void bool_const_class::code(ostream &s, CgenClassTableP env)
 }
 
 void new__class::code(ostream &s, CgenClassTableP env) {
+  if (cgen_debug) {
+    cout << "\tNewing object " << type_name << "..." << endl;
+  }
   // 1. load the address of the prototype object
   // 2. make a copy
   // 3. init such object
   emit_partial_load_address(ACC, s);  emit_protobj_ref(type_name, s);  s << endl;
   s << JAL;  emit_method_ref(Object, ::copy, s);  s << endl;
   s << JAL;  emit_init_ref(type_name, s);  s << endl;
+
 }
 
 void isvoid_class::code(ostream &s, CgenClassTableP env) {

@@ -86,10 +86,12 @@ void code(ostream&, CgenClassTableP) const;
 
 
 #define Formal_EXTRAS                              \
+virtual Symbol get_name() const = 0; \
 virtual void dump_with_types(ostream&,int) = 0;
 
 
 #define formal_EXTRAS                           \
+Symbol get_name() const { return name; } \
 void dump_with_types(ostream&,int);
 
 

@@ -59,6 +59,17 @@ public:
    CgenClassTable(Classes, ostream& str);
    void code();
    CgenNodeP root();
+
+   // The CgenClassTable itself is an environment that maps the class attributes
+   // & methods to their location (offset), though not directly.
+   // We need one more mapping to map the local variables to their location.
+
+   // Note that arguments are also in the category of locals, and their offsets
+   // are negative, while others are always positive.
+   SymbolTable<Symbol, int /* offset */> *local_table;
+
+   // Records the class which the current SELF_TYPE holds.
+   Symbol self_object;
 };
 
 
