@@ -1387,6 +1387,9 @@ void typcase_class::code(ostream &s, CgenClassTableP env) {
 }
 
 void block_class::code(ostream &s, CgenClassTableP env) {
+  for (int i = body->first(); body->more(i); i = body->next(i)) {
+    body->nth(i)->code(s, env);
+  }
 }
 
 void let_class::code(ostream &s, CgenClassTableP env) {
