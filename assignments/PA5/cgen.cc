@@ -1413,6 +1413,39 @@ void assign_class::code(ostream &s, CgenClassTableP env) {
 }
 
 void static_dispatch_class::code(ostream &s, CgenClassTableP env) {
+  // Evaluate and push the actuals.
+  for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
+    actual->nth(i)->code(s, env);  // the result value is always placed in ACC
+    emit_push(ACC, s);
+  }
+
+  // Evaluate the object in dispatch.
+  expr->code(s, env);
+
+  // Pass SELF through ACC.
+  if (type_name == SELF_TYPE) {
+    emit_move(ACC, SELF, s);
+    type_name = env->self_object;
+    if (cgen_debug) {
+      cout << "\tDispatching to SELF_TYPE, resolved as " << type_name << endl;
+    }
+  } else {
+    emit_partial_load_address(ACC, s);  emit_protobj_ref(type_name, s);  s << endl;
+    if (cgen_debug) {
+      cout << "\tDispatching to " << type_name << endl;
+    }
+  }
+
+  // Locate the method.
+  emit_load(T1, DISPTABLE_OFFSET, ACC /* self of expr */, s);
+  const int offset = env->lookup(type_name)->get_method_offset(name);
+  emit_load(T1, offset, T1, s);
+  if (cgen_debug) {
+    cout << "\tMethod " << name << " at offset " << offset << endl;
+  }
+
+  // Call the method.
+  emit_jalr(T1, s);
 }
 
 void dispatch_class::code(ostream &s, CgenClassTableP env) {
