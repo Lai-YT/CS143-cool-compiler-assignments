@@ -1371,6 +1371,31 @@ void method_class::code(ostream &s, CgenClassTableP env) const {
 //*****************************************************************
 
 void assign_class::code(ostream &s, CgenClassTableP env) {
+  emit_comment("Start assign", s);
+
+  emit_comment("Evaluate the right hand side", s);
+  expr->code(s, env);
+  emit_comment("End right hand side", s);
+
+  emit_comment("Locate the left hand side", s);
+  if (int *local_offset = env->local_table->lookup(name)) {
+    emit_comment("Is local variable", s);
+    emit_partial_load_address(T1, s);  emit_protobj_ref(env->self_object, s);  s << endl;
+    // emit_load(T1, *local_offset, T1, s);
+    emit_addiu(T1, T1, WORD_SIZE * (*local_offset), s);
+  } else {
+    // We can assume that the variable does exist since we've done the
+    // semantic check.
+    emit_comment("Is attribute", s);
+    CgenNode *class_node = env->lookup(env->self_object);
+    int attribute_offset = class_node->get_attribute_offset(name);
+    // emit_load(T1, DEFAULT_OBJFIELDS + attribute_offset, SELF, s);
+    emit_addiu(T1, SELF, WORD_SIZE * (DEFAULT_OBJFIELDS + attribute_offset), s);
+  }
+  emit_comment("End left hand side", s);
+  // Now T1 contains the address of the lhs, ACC contains the value of the rhs.
+  emit_store(ACC, 0, T1, s);
+  emit_comment("End assign", s);
 }
 
 void static_dispatch_class::code(ostream &s, CgenClassTableP env) {
@@ -1496,4 +1521,22 @@ void no_expr_class::code(ostream &s, CgenClassTableP env) {
 }
 
 void object_class::code(ostream &s, CgenClassTableP env) {
+  emit_comment("Locate object expression", s);
+  // Could be a local or an attribute, or even self.
+  if (name == self) {
+    emit_comment("Is self", s);
+    emit_move(ACC, SELF, s);
+  } else if (int *local_offset = env->local_table->lookup(name)) {
+    emit_comment("Is local variable", s);
+    emit_partial_load_address(T1, s);  emit_protobj_ref(env->self_object, s);  s << endl;
+    emit_load(ACC, *local_offset, T1, s);
+  } else {
+    // We can assume that the variable does exist since we've done the
+    // semantic check.
+    emit_comment("Is attribute", s);
+    CgenNode *class_node = env->lookup(env->self_object);
+    int attribute_offset = class_node->get_attribute_offset(name);
+    emit_load(ACC, DEFAULT_OBJFIELDS + attribute_offset, SELF, s);
+  }
+  emit_comment("End object expression", s);
 }
