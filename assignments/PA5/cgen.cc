@@ -601,6 +601,15 @@ static List<CgenNode>* get_parents(const CgenNode *nd) {
   return parents;
 }
 
+//
+// A function that manages the global label counter.
+// One should always get a new unique label with this function.
+//
+static int get_next_label() {
+  static int label = 0;
+  return label++;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 //
 //  CgenClassTable methods
@@ -1444,6 +1453,23 @@ void dispatch_class::code(ostream &s, CgenClassTableP env) {
 }
 
 void cond_class::code(ostream &s, CgenClassTableP env) {
+  pred->code(s, env);
+  // A bool value 0/1 is now in ACC.
+  const int else_label = get_next_label();
+  const int exit_label = get_next_label();
+  emit_beqz(ACC, else_label, s);
+
+  emit_comment("true, fallthrough then branch", s);
+  then_exp->code(s, env);
+  emit_comment("finish then branch, jump across else branch", s);
+  emit_branch(exit_label, s);
+
+  emit_label_def(else_label, s);
+  emit_comment("false, jump here to else branch", s);
+  else_exp->code(s, env);
+
+  emit_comment("End condition", s);
+  emit_label_def(exit_label, s);
 }
 
 void loop_class::code(ostream &s, CgenClassTableP env) {
