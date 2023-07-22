@@ -366,8 +366,13 @@ static void emit_gc_check(char *source, ostream &s)
   s << JAL << "_gc_check" << endl;
 }
 
+//
+// Emits human-readable comments if the code gen debugging flag is set.
+//
 static void emit_comment(char *comment, ostream &s) {
-  s << "# " << comment << endl;
+  if (cgen_debug) {
+    s << "# " << comment << endl;
+  }
 }
 
 //
