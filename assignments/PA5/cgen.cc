@@ -366,6 +366,35 @@ static void emit_gc_check(char *source, ostream &s)
   s << JAL << "_gc_check" << endl;
 }
 
+static void emit_comment(char *comment, ostream &s) {
+  s << "# " << comment << endl;
+}
+
+//
+// Caller saved: ACC (temporaries, if any)
+// Callee saved: RA, FP, SELF, SP
+//
+
+static const int NUM_OF_CALLEE_SAVED = 3;
+
+static void emit_callee_saves(ostream &s) {
+  emit_comment("Callee saves:", s);
+  emit_push(RA, s);
+  emit_push(FP, s);
+  emit_push(SELF, s);
+  emit_comment("End callee save", s);
+}
+
+static void emit_callee_restores(ostream &s) {
+  emit_comment("Callee restores:", s);
+  emit_pop(SELF, s);
+  // NOTE: In the class example, FP is caller-saved but restored by the callee,
+  // which looks awkward to me. I change it to fully callee-saved.
+  emit_pop(FP, s);
+  emit_pop(RA, s);
+  emit_comment("End callee restore", s);
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -1217,20 +1246,14 @@ void CgenNode::code_class_method(ostream &s, CgenClassTableP env) const {
 // Emit initialization code of the parents first, then self.
 //
 void CgenNode::code_class_init(ostream &s, CgenClassTableP env) const {
-  //
-  // Caller saved: ACC (temporaries, if any)
-  // Callee saved: RA, FP, SELF, SP
-  //
-
-  // Callee saved, from the perspective of called by child.
-  emit_push(RA, s);
-  emit_push(FP, s);
-  emit_push(SELF, s);
+  // From the perspective of called by child.
+  emit_callee_saves(s);
 
   // So that we know FP + 4 is our first argument, FP + 8 is the second one, and
   // NOTE: The frame pointer points to the top, not bottom of the frame.
   // so on (although there's no argument in this case).
-  emit_addiu(FP, SP, 3 * WORD_SIZE, s);
+  emit_comment("Set new frame pointer", s);
+  emit_addiu(FP, SP, WORD_SIZE * NUM_OF_CALLEE_SAVED, s);
 
   //
   // On entry:
@@ -1250,6 +1273,8 @@ void CgenNode::code_class_init(ostream &s, CgenClassTableP env) const {
   // no any other arguments.
   //
 
+  // XXX: not yet get the rule of passing SELF
+
   // Get our SELF pointer from ACC:
   emit_move(SELF, ACC, s);
 
@@ -1259,7 +1284,7 @@ void CgenNode::code_class_init(ostream &s, CgenClassTableP env) const {
   // We should push all arguments (exclude SELF) on to the stack, but there's no
   // arguments in this case.
 
-  // Pass SELF through ACC.
+  emit_comment("Pass SELF through ACC", s);
   emit_move(ACC, SELF, s);
 
   // Now it's time to call the init method of the parent.
@@ -1286,14 +1311,13 @@ void CgenNode::code_class_init(ostream &s, CgenClassTableP env) const {
     }
   }
 
-  // Restore callee saved:
-  emit_pop(SELF, s);
-  // NOTE: In the class example, FP is caller-saved but restored by the callee,
-  // which looks awkward to me. I change it to fully callee-saved.
-  emit_pop(FP, s);
-  emit_pop(RA, s);
+  emit_callee_restores(s);
+
   // We should pop all arguments to restore SP, but there's no arguments in this
   // case.
+
+  // The initialized object is returned in ACC.
+  emit_move(ACC, SELF, s);
 
   emit_return(s);
 }
@@ -1304,12 +1328,10 @@ void method_class::code(ostream &s, CgenClassTableP env) const {
   // Callee saved: RA, FP, SELF, SP
   //
 
-  // Callee saved:
-  emit_push(RA, s);
-  emit_push(FP, s);
-  emit_push(SELF, s);
+  emit_callee_saves(s);
 
   // FP + 4 is our first argument, FP + 8 is the second one, and so on.
+  emit_comment("Set new frame pointer", s);
   emit_addiu(FP, SP, 3 * WORD_SIZE, s);
 
   // SELF is passed through ACC.
@@ -1320,20 +1342,19 @@ void method_class::code(ostream &s, CgenClassTableP env) const {
     env->local_table->addid(formals->nth(i)->get_name(), new int(i + 1));
   }
 
-  // Execute the expressions inside the method.
+  emit_comment("Execute the expressions inside the method", s);
   expr->code(s, env);
+  emit_comment("End method expression", s);
 
   // Note that the return value is in ACC.
 
-  // Restore callee saved:
-  emit_pop(SELF, s);
-  emit_pop(FP, s);
-  emit_pop(RA, s);
+  emit_callee_restores(s);
 
-  // Pops all arguments to restore SP.
+  emit_comment("Pops all arguments to restore SP", s);
   for (int i = 0; i < formals->len(); i++) {
     emit_pop(T1, s);
   }
+  emit_comment("End argument pop", s);
 
   // return
   emit_return(s);
