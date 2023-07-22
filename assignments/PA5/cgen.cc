@@ -1456,16 +1456,53 @@ void block_class::code(ostream &s, CgenClassTableP env) {
 void let_class::code(ostream &s, CgenClassTableP env) {
 }
 
+using EmitArithmeticFp = void (*)(char *, char *, char *, ostream &);
+
+static void code_arithmetic(Expression e1, Expression e2,
+                            EmitArithmeticFp emit_arithmetic, ostream &s,
+                            CgenClassTableP env) {
+  emit_comment("Evaluate left operand", s);
+  e1->code(s, env);
+  emit_comment("Save left operand", s);
+  emit_push(ACC, s);
+  emit_comment("Evaluate right operand", s);
+  e2->code(s, env);
+  emit_comment("Save right operand", s);
+  emit_push(ACC, s);
+  // ACC now contains the pointer to a the right operand,
+  // we'll copy one from it as the result Object.
+  emit_comment("Create result object", s);
+  s << JAL;
+  emit_method_ref(Object, ::copy, s);
+  s << endl;
+  emit_comment("Restore right operand", s);
+  emit_pop(T2, s);
+  emit_comment("Restore left operand", s);
+  emit_pop(T1, s);
+  emit_comment("Get int value of right operand", s);
+  emit_load(T2, 3, T2, s);
+  emit_comment("Get int value of left operand", s);
+  emit_load(T1, 3, T1, s);
+  emit_comment("Place the result into the left operand, just to save register",
+               s);
+  emit_arithmetic(T1, T1, T2, s);
+  emit_store(T1, 3, ACC, s);
+}
+
 void plus_class::code(ostream &s, CgenClassTableP env) {
+  code_arithmetic(e1, e2, emit_add, s, env);
 }
 
 void sub_class::code(ostream &s, CgenClassTableP env) {
+  code_arithmetic(e1, e2, emit_sub, s, env);
 }
 
 void mul_class::code(ostream &s, CgenClassTableP env) {
+  code_arithmetic(e1, e2, emit_mul, s, env);
 }
 
 void divide_class::code(ostream &s, CgenClassTableP env) {
+  code_arithmetic(e1, e2, emit_div, s, env);
 }
 
 void neg_class::code(ostream &s, CgenClassTableP env) {
