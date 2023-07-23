@@ -30,6 +30,7 @@
 
 extern void emit_string_constant(ostream& str, char *s);
 extern int cgen_debug;
+extern char *curr_filename;
 
 //
 // Three symbols from the semantic analyzer (semant.cc) are used.
@@ -1421,7 +1422,7 @@ void assign_class::code(ostream &s, CgenClassTableP env) {
 }
 
 static void code_dispatch(Symbol name, Expressions actual, Expression expr,
-                          Symbol dispatch_type, ostream &s,
+                          Symbol dispatch_type, int line_number, ostream &s,
                           CgenClassTableP env) {
   // Evaluate and push the actuals.
   for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
@@ -1431,6 +1432,16 @@ static void code_dispatch(Symbol name, Expressions actual, Expression expr,
 
   // Evaluate the object in dispatch.
   expr->code(s, env);
+
+  // Abort the program if dispatch on void.
+  const int continue_label = get_next_label();
+  emit_bne(ACC, ZERO, continue_label, s);
+  emit_comment("Is void, abort", s);
+  // Take filename & line number as parameters.
+  emit_load_string(ACC, stringtable.lookup_string(curr_filename), s);
+  emit_load_imm(T1, line_number, s);
+  emit_jal("_dispatch_abort", s);
+  emit_label_def(continue_label, s);
 
   // Pass SELF through ACC.
   if (dispatch_type == SELF_TYPE) {
@@ -1460,11 +1471,12 @@ static void code_dispatch(Symbol name, Expressions actual, Expression expr,
 }
 
 void static_dispatch_class::code(ostream &s, CgenClassTableP env) {
-  code_dispatch(name, actual, expr, type_name, s, env);
+  code_dispatch(name, actual, expr, type_name, get_line_number(), s, env);
 }
 
 void dispatch_class::code(ostream &s, CgenClassTableP env) {
-  code_dispatch(name, actual, expr, expr->get_type(), s, env);
+  code_dispatch(name, actual, expr, expr->get_type(), get_line_number(), s,
+                env);
 }
 
 void cond_class::code(ostream &s, CgenClassTableP env) {
