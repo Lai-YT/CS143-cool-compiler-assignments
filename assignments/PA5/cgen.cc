@@ -1552,6 +1552,10 @@ void divide_class::code(ostream &s, CgenClassTableP env) {
 }
 
 void neg_class::code(ostream &s, CgenClassTableP env) {
+  e1->code(s, env);
+  emit_fetch_int(T1, ACC, s);
+  emit_neg(T1, T1, s);
+  emit_store_int(T1, ACC, s);
 }
 
 using EmitComparisonFp = void (*)(char *, char *, int, ostream &);
@@ -1630,7 +1634,6 @@ void new__class::code(ostream &s, CgenClassTableP env) {
   emit_partial_load_address(ACC, s);  emit_protobj_ref(type_name, s);  s << endl;
   s << JAL;  emit_method_ref(Object, ::copy, s);  s << endl;
   s << JAL;  emit_init_ref(type_name, s);  s << endl;
-
 }
 
 void isvoid_class::code(ostream &s, CgenClassTableP env) {
