@@ -1490,6 +1490,17 @@ void cond_class::code(ostream &s, CgenClassTableP env) {
 }
 
 void loop_class::code(ostream &s, CgenClassTableP env) {
+  const int begin_label = get_next_label();
+  const int exit_label = get_next_label();
+  emit_label_def(begin_label, s);
+  pred->code(s, env);
+  emit_fetch_bool(ACC, ACC, s);
+  emit_beqz(ACC, exit_label, s);
+  body->code(s, env);
+  emit_branch(begin_label, s);
+  emit_label_def(exit_label, s);
+  emit_comment("Loop expression evaluates to void", s);
+  emit_load_imm(ACC, 0, s);
 }
 
 void typcase_class::code(ostream &s, CgenClassTableP env) {
@@ -1650,6 +1661,7 @@ void isvoid_class::code(ostream &s, CgenClassTableP env) {
 }
 
 void no_expr_class::code(ostream &s, CgenClassTableP env) {
+  /* do nothing */
 }
 
 void object_class::code(ostream &s, CgenClassTableP env) {
