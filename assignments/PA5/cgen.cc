@@ -1461,7 +1461,9 @@ void dispatch_class::code(ostream &s, CgenClassTableP env) {
 
 void cond_class::code(ostream &s, CgenClassTableP env) {
   pred->code(s, env);
-  // A bool value 0/1 is now in ACC.
+  // A bool object is now in ACC.
+  // Extract its value.
+  emit_load(ACC, 3, ACC, s);
   const int else_label = get_next_label();
   const int exit_label = get_next_label();
   emit_beqz(ACC, else_label, s);

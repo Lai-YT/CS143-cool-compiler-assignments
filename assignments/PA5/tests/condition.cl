@@ -6,5 +6,12 @@ class Main inherits IO {
       out_string(
          if predicate then "true" else "false" fi
       );
+      out_string("\n");
+
+      predicate <- false;
+      out_string(
+         if predicate then "true" else "false" fi
+      );
+      out_string("\n");
    }};
 };
