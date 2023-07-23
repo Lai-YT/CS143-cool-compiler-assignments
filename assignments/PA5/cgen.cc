@@ -1554,13 +1554,41 @@ void divide_class::code(ostream &s, CgenClassTableP env) {
 void neg_class::code(ostream &s, CgenClassTableP env) {
 }
 
+using EmitComparisonFp = void (*)(char *, char *, int, ostream &);
+
+static void code_comparison(Expression e1, Expression e2,
+                            EmitComparisonFp emit_comparison, ostream &s,
+                            CgenClassTableP env) {
+  emit_comment("Evaluate left operand", s);
+  e1->code(s, env);
+  emit_move(T1, ACC, s);
+  emit_comment("Get int value of left operand", s);
+  emit_fetch_int(T1, T1, s);
+  emit_comment("Evaluate right operand", s);
+  e2->code(s, env);
+  emit_move(T2, ACC, s);
+  emit_comment("Get int value of right operand", s);
+  emit_fetch_int(T2, T2, s);
+
+  emit_comment("Set the result to true first and change later if is actually false", s);
+  emit_load_bool(ACC, truebool, s);
+  const int exit_label = get_next_label();
+  emit_comparison(T1, T2, exit_label, s);
+  emit_comment("Is actually false, change the result", s);
+  emit_load_bool(ACC, falsebool, s);
+  emit_label_def(exit_label, s);
+}
+
 void lt_class::code(ostream &s, CgenClassTableP env) {
+  code_comparison(e1, e2, emit_blt, s, env);
 }
 
 void eq_class::code(ostream &s, CgenClassTableP env) {
+  code_comparison(e1, e2, emit_beq, s, env);
 }
 
 void leq_class::code(ostream &s, CgenClassTableP env) {
+  code_comparison(e1, e2, emit_bleq, s, env);
 }
 
 void comp_class::code(ostream &s, CgenClassTableP env) {
