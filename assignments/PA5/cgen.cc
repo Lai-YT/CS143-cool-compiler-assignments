@@ -1592,6 +1592,14 @@ void leq_class::code(ostream &s, CgenClassTableP env) {
 }
 
 void comp_class::code(ostream &s, CgenClassTableP env) {
+  e1->code(s, env);
+  emit_fetch_bool(T1, ACC, s);
+  emit_load_bool(ACC, truebool, s);
+  const int exit_label = get_next_label();
+  emit_beqz(T1, exit_label, s);
+  emit_comment("Is true, so return false", s);
+  emit_load_bool(ACC, falsebool, s);
+  emit_label_def(exit_label, s);
 }
 
 void int_const_class::code(ostream &s, CgenClassTableP env)
