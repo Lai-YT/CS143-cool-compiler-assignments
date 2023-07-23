@@ -1592,6 +1592,16 @@ void new__class::code(ostream &s, CgenClassTableP env) {
 }
 
 void isvoid_class::code(ostream &s, CgenClassTableP env) {
+  e1->code(s, env);
+  emit_move(T1, ACC, s);
+  // If the expression evaluate to void, T1 is now 0.
+  emit_comment("Set the result to true first and change later if is actually false", s);
+  emit_load_bool(ACC, truebool, s);
+  const int exit_label = get_next_label();
+  emit_beqz(T1, exit_label, s);
+  emit_comment("Is actually false, change the result", s);
+  emit_load_bool(ACC, falsebool, s);
+  emit_label_def(exit_label, s);
 }
 
 void no_expr_class::code(ostream &s, CgenClassTableP env) {
