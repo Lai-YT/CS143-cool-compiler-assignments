@@ -344,6 +344,14 @@ static void emit_fetch_int(char *dest, char *source, ostream& s)
 { emit_load(dest, DEFAULT_OBJFIELDS, source, s); }
 
 //
+// Fetch the bool value in an Bool object.
+// Emits code to fetch the bool value of the bool object pointed
+// to by register source into the register dest
+//
+static void emit_fetch_bool(char *dest, char *source, ostream& s)
+{ emit_load(dest, DEFAULT_OBJFIELDS, source, s); }
+
+//
 // Emits code to store the integer value contained in register source
 // into the Integer object pointed to by dest.
 //
@@ -1346,7 +1354,7 @@ void method_class::code(ostream &s, CgenClassTableP env) const {
 
   // FP + 4 is our first argument, FP + 8 is the second one, and so on.
   emit_comment("Set new frame pointer", s);
-  emit_addiu(FP, SP, 3 * WORD_SIZE, s);
+  emit_addiu(FP, SP, NUM_OF_CALLEE_SAVED * WORD_SIZE, s);
 
   // SELF is passed through ACC.
   emit_move(SELF, ACC, s);
@@ -1463,7 +1471,7 @@ void cond_class::code(ostream &s, CgenClassTableP env) {
   pred->code(s, env);
   // A bool object is now in ACC.
   // Extract its value.
-  emit_load(ACC, 3, ACC, s);
+  emit_fetch_bool(ACC, ACC, s);
   const int else_label = get_next_label();
   const int exit_label = get_next_label();
   emit_beqz(ACC, else_label, s);
@@ -1512,21 +1520,19 @@ static void code_arithmetic(Expression e1, Expression e2,
   // ACC now contains the pointer to a the right operand,
   // we'll copy one from it as the result Object.
   emit_comment("Create result object", s);
-  s << JAL;
-  emit_method_ref(Object, ::copy, s);
-  s << endl;
+  s << JAL;  emit_method_ref(Object, ::copy, s);  s << endl;
   emit_comment("Restore right operand", s);
   emit_pop(T2, s);
+  emit_comment("Get int value of right operand", s);
+  emit_fetch_int(T2, T2, s);
   emit_comment("Restore left operand", s);
   emit_pop(T1, s);
-  emit_comment("Get int value of right operand", s);
-  emit_load(T2, 3, T2, s);
   emit_comment("Get int value of left operand", s);
-  emit_load(T1, 3, T1, s);
-  emit_comment("Place the result into the left operand, just to save register",
+  emit_fetch_int(T1, T1, s);
+  emit_comment("Place the result in the left operand, just to save register",
                s);
   emit_arithmetic(T1, T1, T2, s);
-  emit_store(T1, 3, ACC, s);
+  emit_store_int(T1, ACC, s);
 }
 
 void plus_class::code(ostream &s, CgenClassTableP env) {
