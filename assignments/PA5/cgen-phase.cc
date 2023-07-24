@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
 
   // The lexer/parser seems not handle the filename, so manual set here.
   // Incorrect if multiple files.
-  curr_filename = argv[firstfile_index];
+  curr_filename = strdup(argv[firstfile_index]);
 
   if (!out_filename && optind < argc) {   // no -o option
       char *dot = strrchr(argv[optind], '.');
