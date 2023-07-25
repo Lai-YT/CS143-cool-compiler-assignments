@@ -811,7 +811,7 @@ void CgenClassTable::code_class_methods() {
 }
 
 CgenClassTable::CgenClassTable(Classes classes, ostream &s)
-    : nds(NULL), str(s), local_table(new SymbolTable<Symbol, int>) {
+    : nds(NULL), str(s), local_table(new LocalTable) {
   //  NOTE: the reference compiler uses these three tags for basic class,
   //  which is the reason why I choose them
    stringclasstag = 5 /* Change to your String class tag here */;
@@ -1158,6 +1158,35 @@ CgenNodeP CgenClassTable::root()
    return probe(Object);
 }
 
+void LocalTable::enterscope() {
+   Base::enterscope();
+   // The offset keep counting since no new frame.
+   next_local_offsets
+       = new List<int>(new int(*next_local_offsets->hd()), next_local_offsets);
+}
+
+void LocalTable::exitscope() {
+   Base::exitscope();
+   next_local_offsets = next_local_offsets->tl();
+}
+
+void LocalTable::enter_method_scope() {
+   Base::enterscope();
+   next_local_offsets = new List<int>(new int(-1), next_local_offsets);
+}
+
+void LocalTable::exit_method_scope() {
+   Base::exitscope();
+   next_local_offsets = next_local_offsets->tl();
+}
+
+int LocalTable::get_next_local_offset() {
+   return (*next_local_offsets->hd())--;
+}
+
+void LocalTable::addid(Symbol id) {
+   Base::addid(id, new int(get_next_local_offset()));
+}
 
 ///////////////////////////////////////////////////////////////////////
 //
@@ -1257,10 +1286,10 @@ void CgenNode::code_class_method(ostream &s, CgenClassTableP env) const {
   for (auto [implementor, method] : dispatch_layout) {
     if (implementor == name) {
       emit_method_ref(name, method->name, s);  s << LABEL;
-      env->local_table->enterscope();
+      env->local_table->enter_method_scope();
       env->self_object = name;
       method->code(s, env);
-      env->local_table->exitscope();
+      env->local_table->exit_method_scope();
     }
   }
 }
@@ -1361,8 +1390,7 @@ void method_class::code(ostream &s, CgenClassTableP env) const {
   emit_move(SELF, ACC, s);
 
   for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
-    // Offset 0 is where the return address is, can't be a local.
-    env->local_table->addid(formals->nth(i)->get_name(), new int(i + 1));
+    env->local_table->addid(formals->nth(i)->get_name());
   }
 
   emit_comment("Execute the expressions inside the method", s);
@@ -1403,16 +1431,13 @@ void assign_class::code(ostream &s, CgenClassTableP env) {
   emit_comment("Locate the left hand side", s);
   if (int *local_offset = env->local_table->lookup(name)) {
     emit_comment("Is local variable", s);
-    emit_partial_load_address(T1, s);  emit_protobj_ref(env->self_object, s);  s << endl;
-    // emit_load(T1, *local_offset, T1, s);
-    emit_addiu(T1, T1, WORD_SIZE * (*local_offset), s);
+    emit_addiu(T1, FP, WORD_SIZE * (*local_offset), s);
   } else {
     // We can assume that the variable does exist since we've done the
     // semantic check.
     emit_comment("Is attribute", s);
     CgenNode *class_node = env->lookup(env->self_object);
     int attribute_offset = class_node->get_attribute_offset(name);
-    // emit_load(T1, DEFAULT_OBJFIELDS + attribute_offset, SELF, s);
     emit_addiu(T1, SELF, WORD_SIZE * (DEFAULT_OBJFIELDS + attribute_offset), s);
   }
   emit_comment("End left hand side", s);
@@ -1525,6 +1550,29 @@ void block_class::code(ostream &s, CgenClassTableP env) {
 }
 
 void let_class::code(ostream &s, CgenClassTableP env) {
+  env->local_table->enterscope();
+
+  emit_callee_saves(s);
+  emit_comment("Allocate new local", s);
+  emit_partial_load_address(ACC, s);  emit_protobj_ref(type_decl, s);  s << endl;
+  s << JAL;  emit_method_ref(Object, ::copy, s);  s << endl;
+  s << JAL;  emit_init_ref(type_decl, s);  s << endl;
+  emit_comment("Add new local", s);
+  emit_push(ACC, s);
+  emit_callee_restores(s);
+
+  env->local_table->addid(identifier);
+  init->code(s, env);
+  if (!init->is_no_expr()) {
+    emit_comment("Initialize", s);
+    emit_store(ACC, *env->local_table->lookup(identifier), FP, s);
+  }
+
+  body->code(s, env);
+
+  emit_comment("Local out of scope", s);
+  emit_pop(T1, s);
+  env->local_table->exitscope();
 }
 
 using EmitArithmeticFp = void (*)(char *, char *, char *, ostream &);
@@ -1677,21 +1725,32 @@ void no_expr_class::code(ostream &s, CgenClassTableP env) {
 }
 
 void object_class::code(ostream &s, CgenClassTableP env) {
+  if (cgen_debug) {
+    cout << "Looking up " << name << ", ";
+  }
   emit_comment("Locate object expression", s);
   // Could be a local or an attribute, or even self.
   if (name == self) {
+    if (cgen_debug) {
+      cout << "is self" << endl;
+    }
     emit_comment("Is self", s);
     emit_move(ACC, SELF, s);
   } else if (int *local_offset = env->local_table->lookup(name)) {
+    if (cgen_debug) {
+      cout << "a local at offset " << *local_offset << endl;
+    }
     emit_comment("Is local variable", s);
-    emit_partial_load_address(T1, s);  emit_protobj_ref(env->self_object, s);  s << endl;
-    emit_load(ACC, *local_offset, T1, s);
+    emit_load(ACC, *local_offset, FP, s);
   } else {
     // We can assume that the variable does exist since we've done the
     // semantic check.
     emit_comment("Is attribute", s);
     CgenNode *class_node = env->lookup(env->self_object);
     int attribute_offset = class_node->get_attribute_offset(name);
+    if (cgen_debug) {
+      cout << "an attribute at offset " << attribute_offset << endl;
+    }
     emit_load(ACC, DEFAULT_OBJFIELDS + attribute_offset, SELF, s);
   }
   emit_comment("End object expression", s);

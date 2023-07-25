@@ -17,6 +17,8 @@ typedef CgenClassTable *CgenClassTableP;
 class CgenNode;
 typedef CgenNode *CgenNodeP;
 
+class LocalTable;
+
 typedef unsigned ClassTag;
 
 class CgenClassTable : public SymbolTable<Symbol,CgenNode> {
@@ -66,12 +68,31 @@ public:
 
    // Note that arguments are also in the category of locals, and their offsets
    // are negative, while others are always positive.
-   SymbolTable<Symbol, int /* offset */> *local_table;
+   LocalTable *local_table;
 
    // Records the class which the current SELF_TYPE holds.
    Symbol self_object;
 };
 
+class LocalTable : public SymbolTable<Symbol, int /* offset */> {
+   using Base = SymbolTable<Symbol, int>;
+   using Base::SymbolTable;
+
+private:
+   // Every time a new method is entered, a new offset -1 (0 is ra) is pushed.
+   // Keep counting if a let scope is entered since it doesn't use a new frame.
+   List<int> *next_local_offsets = nullptr;
+   int get_next_local_offset();
+
+public:
+   // Note that if is method scope, don't call enterscope.
+   void enter_method_scope();
+   // Note that if is method scope, don't call exitscope.
+   void exit_method_scope();
+   void enterscope();
+   void exitscope();
+   void addid(Symbol id);
+};
 
 class CgenNode : public class__class {
 private:
