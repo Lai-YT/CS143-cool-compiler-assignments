@@ -1403,7 +1403,7 @@ void method_class::code(ostream &s, CgenClassTableP env) const {
 
   emit_comment("Pops all arguments to restore SP", s);
   for (int i = 0; i < formals->len(); i++) {
-    emit_pop(T1, s);
+    emit_pop(ZERO, s);
   }
   emit_comment("End argument pop", s);
 
@@ -1571,7 +1571,7 @@ void let_class::code(ostream &s, CgenClassTableP env) {
   body->code(s, env);
 
   emit_comment("Local out of scope", s);
-  emit_pop(T1, s);
+  emit_pop(ZERO, s);
   env->local_table->exitscope();
 }
 
