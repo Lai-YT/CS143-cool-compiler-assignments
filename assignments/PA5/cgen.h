@@ -79,10 +79,11 @@ class LocalTable : public SymbolTable<Symbol, int /* offset */> {
    using Base::SymbolTable;
 
 private:
-   // Every time a new method is entered, a new offset -1 (0 is ra) is pushed.
-   // Keep counting if a let scope is entered since it doesn't use a new frame.
-   List<int> *next_local_offsets = nullptr;
-   int get_next_local_offset();
+ // Every time a new method is entered, a new offset (-1 * number of callee
+ // saved) is pushed. Keep counting if a let scope is entered since it doesn't
+ // use a new frame.
+ List<int> *next_local_offsets = nullptr;
+ int get_next_local_offset();
 
 public:
    // Note that if is method scope, don't call enterscope.

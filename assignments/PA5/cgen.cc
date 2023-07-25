@@ -1172,7 +1172,7 @@ void LocalTable::exitscope() {
 
 void LocalTable::enter_method_scope() {
    Base::enterscope();
-   next_local_offsets = new List<int>(new int(-1), next_local_offsets);
+   next_local_offsets = new List<int>(new int(-NUM_OF_CALLEE_SAVED), next_local_offsets);
 }
 
 void LocalTable::exit_method_scope() {
