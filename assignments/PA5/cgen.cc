@@ -1558,8 +1558,8 @@ void let_class::code(ostream &s, CgenClassTableP env) {
   s << JAL;  emit_method_ref(Object, ::copy, s);  s << endl;
   s << JAL;  emit_init_ref(type_decl, s);  s << endl;
   emit_comment("Add new local", s);
-  emit_push(ACC, s);
   emit_callee_restores(s);
+  emit_push(ACC, s);
 
   env->local_table->addid(identifier);
   init->code(s, env);
