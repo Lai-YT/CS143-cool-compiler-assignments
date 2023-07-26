@@ -1307,25 +1307,10 @@ void CgenNode::code_class_init(ostream &s, CgenClassTableP env) const {
   emit_comment("Set new frame pointer", s);
   emit_addiu(FP, SP, WORD_SIZE * NUM_OF_CALLEE_SAVED, s);
 
-  //
-  // On entry:
-  // |   ...    | <- FP
-  // |   ...    |
-  //      .
-  //      .
-  //      .
-  // | OLD_SELF |
-  // |  OLD_FP  |
-  //   (no arg)
-  // |   ...    | <- SP
-  // ACC: SELF
-  //
   // SELF is a special argument, which is always passed through ACC.
   // Other arguments are passed with the stack, but in the init method, there's
   // no any other arguments.
   //
-
-  // XXX: not yet get the rule of passing SELF
 
   // Get our SELF pointer from ACC:
   emit_move(SELF, ACC, s);
@@ -1336,8 +1321,8 @@ void CgenNode::code_class_init(ostream &s, CgenClassTableP env) const {
   // We should push all arguments (exclude SELF) on to the stack, but there's no
   // arguments in this case.
 
-  emit_comment("Pass SELF through ACC", s);
-  emit_move(ACC, SELF, s);
+  // emit_comment("Pass SELF through ACC", s);
+  // emit_move(ACC, SELF, s);
 
   // Now it's time to call the init method of the parent.
   if (parent != No_class) {
@@ -1362,14 +1347,13 @@ void CgenNode::code_class_init(ostream &s, CgenClassTableP env) const {
                  SELF, s);
     }
   }
+  // The initialized object is returned in ACC.
+  emit_move(ACC, SELF, s);
 
   emit_callee_restores(s);
 
   // We should pop all arguments to restore SP, but there's no arguments in this
   // case.
-
-  // The initialized object is returned in ACC.
-  emit_move(ACC, SELF, s);
 
   emit_return(s);
 }
@@ -1541,7 +1525,46 @@ void loop_class::code(ostream &s, CgenClassTableP env) {
 }
 
 void typcase_class::code(ostream &s, CgenClassTableP env) {
+  expr->code(s, env);
+  // The requirement of branch_class::code is the value to case has to be on the
+  // top of the stack.
+  emit_push(ACC, s);
+  const int exit_label = get_next_label();
+  for (int i = cases->first(); cases->more(i); i = cases->next(i)) {
+    cases->nth(i)->code(exit_label, s, env);
+  }
+  emit_label_def(exit_label, s);
+  emit_pop(ZERO, s);
+  emit_load_imm(ACC, 0 /* void */, s);
 }
+
+// Each branch resides in a new scope. It assumes that the value to be type
+// cased is on the top of the stack.
+void branch_class::code(int exit_label, ostream &s, CgenClassTableP env) const {
+  env->local_table->enterscope();
+
+  // Since the value to be type cased is on the top of the stack, it's
+  // automatically bounded to this name.
+  env->local_table->addid(name);
+
+  // Extract class tag of both to test runtime equality.
+  // T1: class tag of the value
+  // T2: class tag of current branch
+  emit_load(T1, *env->local_table->lookup(name), FP, s);
+  emit_load(T1, TAG_OFFSET, T1, s);
+  emit_partial_load_address(T2, s);  emit_protobj_ref(type_decl, s);  s << endl;
+  emit_load(T2, TAG_OFFSET, T2, s);
+  const int not_match_label = get_next_label();
+  emit_bne(T1, T2, not_match_label, s);
+  emit_comment("Matched, evaluate branch", s);
+  expr->code(s, env);
+  emit_comment("End case", s);
+  emit_branch(exit_label, s);
+  emit_label_def(not_match_label, s);
+
+  env->local_table->exitscope();
+}
+
 
 void block_class::code(ostream &s, CgenClassTableP env) {
   for (int i = body->first(); body->more(i); i = body->next(i)) {

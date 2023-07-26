@@ -96,10 +96,12 @@ void dump_with_types(ostream&,int);
 
 
 #define Case_EXTRAS                             \
+virtual void code(int, ostream&, CgenClassTableP) const = 0; \
 virtual void dump_with_types(ostream& ,int) = 0;
 
 
 #define branch_EXTRAS                                   \
+void code(int, ostream&, CgenClassTableP) const; \
 void dump_with_types(ostream& ,int);
 
 
