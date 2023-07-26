@@ -1544,6 +1544,11 @@ void typcase_class::code(ostream &s, CgenClassTableP env) {
   for (int i = cases->first(); cases->more(i); i = cases->next(i)) {
     cases->nth(i)->code(exit_label, s, env);
   }
+
+  // The instruction below is only reached when the expression is not matched by
+  // any branches. We'll abort when there's no match.
+  emit_jal("_case_abort", s);
+
   emit_label_def(exit_label, s);
   emit_pop(ZERO, s);
   emit_load_imm(ACC, 0 /* void */, s);
