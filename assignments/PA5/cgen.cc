@@ -1738,12 +1738,16 @@ void new__class::code(ostream &s, CgenClassTableP env) {
   if (cgen_debug) {
     cout << "\tNewing object " << type_name << "..." << endl;
   }
+  Symbol class_name = type_name;
+  if (class_name == SELF_TYPE) {
+    class_name = env->self_object;
+  }
   // 1. load the address of the prototype object
   // 2. make a copy
   // 3. init such object
-  emit_partial_load_address(ACC, s);  emit_protobj_ref(type_name, s);  s << endl;
+  emit_partial_load_address(ACC, s);  emit_protobj_ref(class_name, s);  s << endl;
   s << JAL;  emit_method_ref(Object, ::copy, s);  s << endl;
-  s << JAL;  emit_init_ref(type_name, s);  s << endl;
+  s << JAL;  emit_init_ref(class_name, s);  s << endl;
 }
 
 void isvoid_class::code(ostream &s, CgenClassTableP env) {
