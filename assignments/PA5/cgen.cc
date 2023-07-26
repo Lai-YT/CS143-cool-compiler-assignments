@@ -1526,6 +1526,17 @@ void loop_class::code(ostream &s, CgenClassTableP env) {
 
 void typcase_class::code(ostream &s, CgenClassTableP env) {
   expr->code(s, env);
+
+  // Abort the program if casing on void.
+  const int continue_label = get_next_label();
+  emit_bne(ACC, ZERO, continue_label, s);
+  emit_comment("Is void, abort", s);
+  // Take filename & line number as parameters.
+  emit_load_string(ACC, stringtable.lookup_string(curr_filename), s);
+  emit_load_imm(T1, expr->get_line_number(), s);
+  emit_jal("_case_abort2", s);
+  emit_label_def(continue_label, s);
+
   // The requirement of branch_class::code is the value to case has to be on the
   // top of the stack.
   emit_push(ACC, s);
