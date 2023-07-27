@@ -1430,9 +1430,10 @@ void assign_class::code(ostream &s, CgenClassTableP env) {
   emit_comment("End assign", s);
 }
 
-static void code_dispatch(Symbol name, Expressions actual, Expression expr,
-                          Symbol dispatch_type, int line_number, ostream &s,
-                          CgenClassTableP env) {
+//
+// Static dispatch doesn't have to care about the runtime type of the expression.
+//
+void static_dispatch_class::code(ostream &s, CgenClassTableP env) {
   // Evaluate and push the actuals.
   for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
     actual->nth(i)->code(s, env);  // the result value is always placed in ACC
@@ -1453,6 +1454,7 @@ static void code_dispatch(Symbol name, Expressions actual, Expression expr,
   emit_label_def(continue_label, s);
 
   // Pass SELF through ACC.
+  Symbol dispatch_type = type_name;
   if (dispatch_type == SELF_TYPE) {
     emit_move(ACC, SELF, s);
     dispatch_type = env->self_object;
@@ -1468,7 +1470,7 @@ static void code_dispatch(Symbol name, Expressions actual, Expression expr,
   }
 
   // Locate the method.
-  emit_load(T1, DISPTABLE_OFFSET, ACC /* self of expr */, s);
+  emit_load(T1, DISPTABLE_OFFSET, ACC /* self to dispatch_type */, s);
   const int offset = env->lookup(dispatch_type)->get_method_offset(name);
   emit_load(T1, offset, T1, s);
   if (cgen_debug) {
@@ -1479,13 +1481,48 @@ static void code_dispatch(Symbol name, Expressions actual, Expression expr,
   emit_jalr(T1, s);
 }
 
-void static_dispatch_class::code(ostream &s, CgenClassTableP env) {
-  code_dispatch(name, actual, expr, type_name, get_line_number(), s, env);
-}
-
+//
+// Dynamic dispatch has to resolve the runtime type.
+//
 void dispatch_class::code(ostream &s, CgenClassTableP env) {
-  code_dispatch(name, actual, expr, expr->get_type(), get_line_number(), s,
-                env);
+  // Evaluate and push the actuals.
+  for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
+    actual->nth(i)->code(s, env);  // the result value is always placed in ACC
+    emit_push(ACC, s);
+  }
+
+  // Evaluate the object in dispatch.
+  expr->code(s, env);
+
+  // Abort the program if dispatch on void.
+  const int continue_label = get_next_label();
+  emit_bne(ACC, ZERO, continue_label, s);
+  emit_comment("Is void, abort", s);
+  // Take filename & line number as parameters.
+  emit_load_string(ACC, stringtable.lookup_string(curr_filename), s);
+  emit_load_imm(T1, line_number, s);
+  emit_jal("_dispatch_abort", s);
+  emit_label_def(continue_label, s);
+
+  // Now ACC points to the prototype object of the runtime type.
+  // Next, get to the dispatch table.
+  emit_load(T1, DISPTABLE_OFFSET, ACC, s);
+
+  // Notice that we kept SELF in ACC, which is further passed to the dispatched
+  // method.
+
+  // Locate the method. It's at the same offset for both base and derived types.
+  const int offset
+      = env->lookup(expr->get_type() == SELF_TYPE ? env->self_object
+                                                  : expr->get_type())
+            ->get_method_offset(name);
+  emit_load(T1, offset, T1, s);
+  if (cgen_debug) {
+    cout << "\tMethod " << name << " at offset " << offset << endl;
+  }
+
+  // Call the method.
+  emit_jalr(T1, s);
 }
 
 void cond_class::code(ostream &s, CgenClassTableP env) {
