@@ -1056,10 +1056,10 @@ void CgenNode::build_dispatch_layout() {
     if (!method) {
       continue;
     }
-    // This is an override, change the implementor
+    // This is an override, the offset is kept.
     if (dispatch_offsets.count(method->name)) {
       const int offset = dispatch_offsets.at(method->name);
-      dispatch_layout.at(offset).first = this->name;
+      dispatch_layout.at(offset) = {this->name, method};
     } else {
       // New method, add into the layout and record the offset
       dispatch_layout.emplace_back(this->name, method);
