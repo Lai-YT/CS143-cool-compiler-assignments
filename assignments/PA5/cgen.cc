@@ -22,6 +22,7 @@
 //
 //**************************************************************
 
+#include <algorithm>
 #include <functional>
 #include <vector>
 
@@ -998,6 +999,7 @@ void CgenClassTable::set_relations(CgenNodeP nd)
   CgenNode *parent_node = probe(nd->get_parent());
   nd->set_parentnd(parent_node);
   parent_node->add_child(nd);
+  if (cgen_debug) cout << "set relation: " << parent_node->name << " <- " << nd->name << endl;
 }
 
 //
@@ -1562,6 +1564,13 @@ void loop_class::code(ostream &s, CgenClassTableP env) {
 }
 
 void typcase_class::code(ostream &s, CgenClassTableP env) {
+  //
+  // As per manual, the branch with the least type such that the type of the
+  // expression is its derived type is selected.
+  // This implies that the order of the branches is irrelevant.
+  // We'll reorder them, so that the type at the bottom of the inheritance chain
+  // appears first.
+  //
   expr->code(s, env);
 
   // Abort the program if casing on void.
@@ -1577,9 +1586,47 @@ void typcase_class::code(ostream &s, CgenClassTableP env) {
   // The requirement of branch_class::code is the value to case has to be on the
   // top of the stack.
   emit_push(ACC, s);
-  const int exit_label = get_next_label();
+
+  //
+  // Start sorting the branches.
+  std::vector<Case> cases_;
   for (int i = cases->first(); cases->more(i); i = cases->next(i)) {
-    cases->nth(i)->code(exit_label, s, env);
+    cases_.push_back(cases->nth(i));
+  }
+
+  auto IsChildOf = [](CgenNode *a, CgenNode *b) {
+      if (cgen_debug) cout << "checking relation between " << a->name << " and " << b->name << endl;
+
+      bool a_is_child_of_b = false;
+      List<CgenNode> *children_of_b = b->get_children();
+      for (auto *child = children_of_b; child; child = child->tl()) {
+          if (child->hd()->name == a->name) {
+              a_is_child_of_b = true;
+          }
+      }
+
+      if (cgen_debug) cout << b->name << " has " << list_length(b->get_children()) << " children" << endl;
+
+      return a_is_child_of_b;
+  };
+  std::sort(cases_.begin(), cases_.end(),
+            [env, IsChildOf](const Case &a, const Case &b) {
+                // a is considered as "less than" b if a is not parent of b.
+                return !IsChildOf(env->lookup(b->get_type_decl()),
+                                  env->lookup(a->get_type_decl()));
+            });
+  // End sorting the branches.
+  //
+
+  const int exit_label = get_next_label();
+  if (cgen_debug) {
+    cout << "Type casing..." << endl;
+    for (auto case_ : cases_) {
+      cout << "\t" << case_->get_type_decl() << " => ..." << endl;
+    }
+  }
+  for (auto case_ : cases_) {
+    case_->code(exit_label, s, env);
   }
 
   // The instruction below is only reached when the expression is not matched by
@@ -1600,24 +1647,38 @@ void branch_class::code(int exit_label, ostream &s, CgenClassTableP env) const {
   // automatically bounded to this name.
   env->local_table->addid(name);
 
-  // Extract class tag of both to test runtime equality.
   // T1: class tag of the value
-  // T2: class tag of current branch
   emit_load(T1, *env->local_table->lookup(name), FP, s);
   emit_load(T1, TAG_OFFSET, T1, s);
-  emit_partial_load_address(T2, s);  emit_protobj_ref(type_decl, s);  s << endl;
-  emit_load(T2, TAG_OFFSET, T2, s);
+  // If the value is one of the derived class of type_decl, it's a match.
+  // A brute-force solution here is to find all of the derived classes and
+  // compare with value.
+  CgenNode *branch_class = env->lookup(type_decl);
+  // T2: class tag of the classes
+  emit_load_imm(T2, branch_class->get_class_tag(), s);
+  const int match_label = get_next_label();
+  emit_beq(T1, T2, match_label, s);
+  list_map<CgenNode>(
+      [&s, match_label](CgenNode *derived_class) {
+          emit_load_imm(T2, derived_class->get_class_tag(), s);
+          emit_beq(T1, T2, match_label, s);
+      },
+      branch_class->get_children());
+
   const int not_match_label = get_next_label();
-  emit_bne(T1, T2, not_match_label, s);
+  emit_comment("Not matched, go to next branch", s);
+  emit_branch(not_match_label, s);
+
+  emit_label_def(match_label, s);
   emit_comment("Matched, evaluate branch", s);
   expr->code(s, env);
   emit_comment("End case", s);
   emit_branch(exit_label, s);
+
   emit_label_def(not_match_label, s);
 
   env->local_table->exitscope();
 }
-
 
 void block_class::code(ostream &s, CgenClassTableP env) {
   for (int i = body->first(); body->more(i); i = body->next(i)) {

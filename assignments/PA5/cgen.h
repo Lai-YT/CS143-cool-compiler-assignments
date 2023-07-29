@@ -19,7 +19,7 @@ typedef CgenNode *CgenNodeP;
 
 class LocalTable;
 
-typedef unsigned ClassTag;
+typedef int ClassTag;
 
 class CgenClassTable : public SymbolTable<Symbol,CgenNode> {
 private:

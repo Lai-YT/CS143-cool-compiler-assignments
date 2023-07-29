@@ -96,11 +96,13 @@ void dump_with_types(ostream&,int);
 
 
 #define Case_EXTRAS                             \
+virtual Symbol get_type_decl() const = 0; \
 virtual void code(int, ostream&, CgenClassTableP) const = 0; \
 virtual void dump_with_types(ostream& ,int) = 0;
 
 
 #define branch_EXTRAS                                   \
+Symbol get_type_decl() const { return type_decl; } \
 void code(int, ostream&, CgenClassTableP) const; \
 void dump_with_types(ostream& ,int);
 
