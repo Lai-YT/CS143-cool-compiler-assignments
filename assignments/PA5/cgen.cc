@@ -1147,11 +1147,11 @@ void CgenClassTable::code()
 //                   - the class methods
 //                   - etc...
 
-  if (cgen_debug) cout << "coding object initializers" << endl;
-  code_class_inits();
-
   if (cgen_debug) cout << "coding class methods" << endl;
   code_class_methods();
+
+  if (cgen_debug) cout << "coding object initializers" << endl;
+  code_class_inits();
 }
 
 
