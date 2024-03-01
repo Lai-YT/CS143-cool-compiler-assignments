@@ -1302,19 +1302,23 @@ void CgenNode::code_class_method(ostream &s, CgenClassTableP env) const {
 void CgenNode::code_class_init(ostream &s, CgenClassTableP env) const {
   // From the perspective of called by child.
   emit_callee_saves(s);
+  // For the initializations methods, Coolaid and the runtime system consider
+  // $a0 (ACC) to be callee-saved (in addition to the callee-saved registers for
+  // normal methods).
+  emit_push(ACC, s);
 
   // So that we know FP + 4 is our first argument, FP + 8 is the second one, and
   // NOTE: The frame pointer points to the top, not bottom of the frame.
   // so on (although there's no argument in this case).
   emit_comment("Set new frame pointer", s);
-  emit_addiu(FP, SP, WORD_SIZE * NUM_OF_CALLEE_SAVED, s);
+  emit_addiu(FP, SP, WORD_SIZE * (NUM_OF_CALLEE_SAVED + 1 /* ACC */), s);
 
   // SELF is a special argument, which is always passed through ACC.
   // Other arguments are passed with the stack, but in the init method, there's
   // no any other arguments.
   //
 
-  // Get our SELF pointer from ACC:
+  emit_comment("Get our SELF pointer from ACC", s);
   emit_move(SELF, ACC, s);
 
   // It might look a bit redundant to move SELF around, but that's because we
@@ -1323,13 +1327,16 @@ void CgenNode::code_class_init(ostream &s, CgenClassTableP env) const {
   // We should push all arguments (exclude SELF) on to the stack, but there's no
   // arguments in this case.
 
-  // emit_comment("Pass SELF through ACC", s);
-  // emit_move(ACC, SELF, s);
+  emit_comment("Pass SELF through ACC", s);
+  emit_move(ACC, SELF, s);
 
   // Now it's time to call the init method of the parent.
   if (parent != No_class) {
     s << JAL;  emit_init_ref(parent, s);  s << endl;
   }
+
+  // The return value is the address of the object, which is the same as self.
+  // We do not have to move it to ACC.
 
   // Restore caller saved:
   // No temporaries.
@@ -1352,6 +1359,7 @@ void CgenNode::code_class_init(ostream &s, CgenClassTableP env) const {
   // The initialized object is returned in ACC.
   emit_move(ACC, SELF, s);
 
+  emit_pop(ACC, s);
   emit_callee_restores(s);
 
   // We should pop all arguments to restore SP, but there's no arguments in this
@@ -1387,6 +1395,8 @@ void method_class::code(ostream &s, CgenClassTableP env) const {
 
   emit_callee_restores(s);
 
+  // On method return, Coolaid expects that the callee pops the entire
+  // activation record including the arguments.
   emit_comment("Pops all arguments to restore SP", s);
   for (int i = 0; i < formals->len(); i++) {
     emit_pop(ZERO, s);
