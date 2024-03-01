@@ -1689,13 +1689,11 @@ void block_class::code(ostream &s, CgenClassTableP env) {
 void let_class::code(ostream &s, CgenClassTableP env) {
   env->local_table->enterscope();
 
-  emit_callee_saves(s);
   emit_comment("Allocate new local", s);
   emit_partial_load_address(ACC, s);  emit_protobj_ref(type_decl, s);  s << endl;
   s << JAL;  emit_method_ref(Object, ::copy, s);  s << endl;
   s << JAL;  emit_init_ref(type_decl, s);  s << endl;
   emit_comment("Add new local", s);
-  emit_callee_restores(s);
   emit_push(ACC, s);
 
   env->local_table->addid(identifier);
