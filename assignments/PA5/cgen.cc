@@ -1697,11 +1697,9 @@ void let_class::code(ostream &s, CgenClassTableP env) {
   emit_push(ACC, s);
 
   env->local_table->addid(identifier);
+  emit_comment("Initialize", s);
   init->code(s, env);
-  if (!init->is_no_expr()) {
-    emit_comment("Initialize", s);
-    emit_store(ACC, *env->local_table->lookup(identifier), FP, s);
-  }
+  emit_store(ACC, *env->local_table->lookup(identifier), FP, s);
 
   body->code(s, env);
 
