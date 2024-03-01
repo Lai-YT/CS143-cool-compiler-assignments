@@ -1941,15 +1941,19 @@ static void code_comparison(Expression e1, Expression e2,
                             CgenClassTableP env) {
   emit_comment("Evaluate left operand", s);
   e1->code(s, env);
-  emit_move(T1, ACC, s);
   emit_comment("Get int value of left operand", s);
-  emit_fetch_int(T1, T1, s);
+  emit_fetch_int(ACC, ACC, s);
+  emit_push(ACC, s);
   emit_comment("Evaluate right operand", s);
   e2->code(s, env);
-  emit_move(T2, ACC, s);
   emit_comment("Get int value of right operand", s);
-  emit_fetch_int(T2, T2, s);
+  emit_fetch_int(ACC, ACC, s);
+  emit_push(ACC, s);
 
+  emit_comment("Restore right operand", s);
+  emit_pop(T2, s);
+  emit_comment("Restore left operand", s);
+  emit_pop(T1, s);
   emit_comment("Set the result to true first and change later if is actually false", s);
   emit_load_bool(ACC, truebool, s);
   const int exit_label = get_next_label();
