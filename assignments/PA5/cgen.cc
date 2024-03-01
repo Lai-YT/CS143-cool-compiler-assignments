@@ -1693,18 +1693,18 @@ void let_class::code(ostream &s, CgenClassTableP env) {
   emit_partial_load_address(ACC, s);  emit_protobj_ref(type_decl, s);  s << endl;
   s << JAL;  emit_method_ref(Object, ::copy, s);  s << endl;
   s << JAL;  emit_init_ref(type_decl, s);  s << endl;
-  emit_comment("Add new local", s);
+  // The new local is now on the top of the stack.
   emit_push(ACC, s);
 
   env->local_table->addid(identifier);
   emit_comment("Initialize", s);
   init->code(s, env);
   emit_store(ACC, *env->local_table->lookup(identifier), FP, s);
+  // Remove the new local from the stack.
+  emit_pop(ZERO, s);
 
   body->code(s, env);
 
-  emit_comment("Local out of scope", s);
-  emit_pop(ZERO, s);
   env->local_table->exitscope();
 }
 
