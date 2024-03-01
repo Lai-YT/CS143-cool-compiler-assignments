@@ -1278,9 +1278,9 @@ void CgenNode::code_attributes(ostream &s) const {
     } else if (type == Str) {
       stringtable.lookup_string("")->code_ref(s);
     } else {
-      s << '0' << "\t# void";
+      s << '0';
     }
-    s << endl;
+    s << "\t# " << attribute->name << ": " << type << endl;
   }
 }
 
@@ -1311,6 +1311,13 @@ void CgenNode::code_class_method(ostream &s, CgenClassTableP env) const {
 // Emit initialization code of the parents first, then self.
 //
 void CgenNode::code_class_init(ostream &s, CgenClassTableP env) const {
+  if (cgen_debug) {
+    cout << name << ".Init" << endl;
+  }
+  // The init method is also a method.
+  env->local_table->enter_method_scope();
+  env->self_object = name;
+
   // From the perspective of called by child.
   emit_callee_saves(s);
   // For the initializations methods, Coolaid and the runtime system consider
@@ -1377,6 +1384,8 @@ void CgenNode::code_class_init(ostream &s, CgenClassTableP env) const {
   // case.
 
   emit_return(s);
+
+  env->local_table->exit_method_scope();
 }
 
 void method_class::code(ostream &s, CgenClassTableP env) const {
@@ -1784,11 +1793,11 @@ void typcase_class::code(ostream &s, CgenClassTableP env) {
   const int exit_label = get_next_label();
   if (cgen_debug) {
     cout << "Type casing..." << endl;
-    for (auto case_ : cases_) {
-      cout << "\t" << case_->get_type_decl() << " => ..." << endl;
-    }
   }
   for (auto case_ : cases_) {
+    if (cgen_debug) {
+      cout << "\t" << case_->get_type_decl() << " => ..." << endl;
+    }
     case_->code(exit_label, s, env);
   }
 
