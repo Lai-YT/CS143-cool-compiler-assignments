@@ -28,6 +28,7 @@
 
 #include "cgen.h"
 #include "cgen_gc.h"
+#include "cool-tree.handcode.h"  // typedefs
 
 extern void emit_string_constant(ostream& str, char *s);
 extern int cgen_debug;
@@ -1188,6 +1189,16 @@ int LocalTable::get_next_local_offset() {
 
 void LocalTable::addid(Symbol id) {
    Base::addid(id, new int(get_next_local_offset()));
+   if (cgen_debug) {
+      cout << "addid: " << id << " -> " << *lookup(id) << endl;
+   }
+}
+
+void LocalTable::addid(Symbol id, int offset) {
+   Base::addid(id, new int(offset));
+   if (cgen_debug) {
+      cout << "addid: " << id << " -> " << *lookup(id) << endl;
+   }
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -1375,17 +1386,29 @@ void method_class::code(ostream &s, CgenClassTableP env) const {
   //
 
   emit_callee_saves(s);
+  const auto num_of_locals = get_number_of_locals();
+  if (cgen_debug) {
+    cout << "\tThere are " << num_of_locals << " locals" << endl;
+  }
+  if (num_of_locals) {
+    emit_comment("Allocate space for locals", s);
+    emit_addiu(SP, SP, -WORD_SIZE * num_of_locals, s);
+  }
 
   // FP + 4 is our first argument, FP + 8 is the second one, and so on.
+  const int num_of_formals = formals->len();
+  for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
+    env->local_table->addid(formals->nth(i)->get_name(), num_of_formals - i);
+  }
   emit_comment("Set new frame pointer", s);
-  emit_addiu(FP, SP, NUM_OF_CALLEE_SAVED * WORD_SIZE, s);
+  emit_addiu(FP, SP, (NUM_OF_CALLEE_SAVED + num_of_locals) * WORD_SIZE, s);
+  if (cgen_debug) {
+    cout << "\tThe size of the frame is " << NUM_OF_CALLEE_SAVED + num_of_locals
+         << " words" << endl;
+  }
 
   // SELF is passed through ACC.
   emit_move(SELF, ACC, s);
-
-  for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
-    env->local_table->addid(formals->nth(i)->get_name());
-  }
 
   emit_comment("Execute the expressions inside the method", s);
   expr->code(s, env);
@@ -1393,18 +1416,148 @@ void method_class::code(ostream &s, CgenClassTableP env) const {
 
   // Note that the return value is in ACC.
 
+  if (num_of_locals) {
+    emit_comment("Deallocate space for locals", s);
+    emit_addiu(SP, SP, WORD_SIZE * num_of_locals, s);
+  }
   emit_callee_restores(s);
 
   // On method return, Coolaid expects that the callee pops the entire
   // activation record including the arguments.
   emit_comment("Pops all arguments to restore SP", s);
-  for (int i = 0; i < formals->len(); i++) {
-    emit_pop(ZERO, s);
-  }
+  emit_addiu(SP, SP, WORD_SIZE * formals->len(), s);
+
   emit_comment("End argument pop", s);
 
   // return
   emit_return(s);
+}
+
+//
+// Polymorphic virtual functions for each nodes to define.
+//
+
+int branch_class::get_number_of_locals() const {
+  return expr->get_number_of_locals();
+}
+
+int method_class::get_number_of_locals() const {
+  // Formals are not counted as locals.
+  return expr->get_number_of_locals();
+}
+
+int assign_class::get_number_of_locals() const {
+  return expr->get_number_of_locals();
+}
+
+int static_dispatch_class::get_number_of_locals() const {
+  int number_of_locals = expr->get_number_of_locals();
+  for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
+    number_of_locals = std::max(number_of_locals, actual->nth(i)->get_number_of_locals());
+  }
+  return number_of_locals;
+}
+
+int dispatch_class::get_number_of_locals() const {
+  int number_of_locals = expr->get_number_of_locals();
+  for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
+    number_of_locals = std::max(number_of_locals, actual->nth(i)->get_number_of_locals());
+  }
+  return number_of_locals;
+}
+
+int cond_class::get_number_of_locals() const {
+  return std::max(pred->get_number_of_locals(),
+                  std::max(then_exp->get_number_of_locals(),
+                           else_exp->get_number_of_locals()));
+}
+
+int loop_class::get_number_of_locals() const {
+  return std::max(pred->get_number_of_locals(), body->get_number_of_locals());
+}
+
+int typcase_class::get_number_of_locals() const {
+  int number_of_locals = expr->get_number_of_locals();
+  for (int i = cases->first(); cases->more(i); i = cases->next(i)) {
+    number_of_locals = std::max(number_of_locals, cases->nth(i)->get_number_of_locals());
+  }
+  return number_of_locals;
+}
+
+int block_class::get_number_of_locals() const {
+  int number_of_locals = 0;
+  for (int i = body->first(); body->more(i); i = body->next(i)) {
+    number_of_locals = std::max(number_of_locals, body->nth(i)->get_number_of_locals());
+  }
+  return number_of_locals;
+}
+
+int let_class::get_number_of_locals() const {
+  return 1 + body->get_number_of_locals();
+}
+
+int plus_class::get_number_of_locals() const {
+  return std::max(e1->get_number_of_locals(), e2->get_number_of_locals());
+}
+
+int sub_class::get_number_of_locals() const {
+  return std::max(e1->get_number_of_locals(), e2->get_number_of_locals());
+}
+
+int mul_class::get_number_of_locals() const {
+  return std::max(e1->get_number_of_locals(), e2->get_number_of_locals());
+}
+
+int divide_class::get_number_of_locals() const {
+  return std::max(e1->get_number_of_locals(), e2->get_number_of_locals());
+}
+
+int neg_class::get_number_of_locals() const {
+  return e1->get_number_of_locals();
+}
+
+int lt_class::get_number_of_locals() const {
+  return std::max(e1->get_number_of_locals(), e2->get_number_of_locals());
+}
+
+int eq_class::get_number_of_locals() const {
+  return std::max(e1->get_number_of_locals(), e2->get_number_of_locals());
+}
+
+int leq_class::get_number_of_locals() const {
+  return std::max(e1->get_number_of_locals(), e2->get_number_of_locals());
+}
+
+int comp_class::get_number_of_locals() const {
+  return e1->get_number_of_locals();
+}
+
+int int_const_class::get_number_of_locals() const {
+  return 0;
+}
+
+int string_const_class::get_number_of_locals() const {
+  return 0;
+}
+
+int bool_const_class::get_number_of_locals() const {
+  return 0;
+}
+
+int new__class::get_number_of_locals() const {
+  return 0;
+}
+
+int isvoid_class::get_number_of_locals() const {
+  return e1->get_number_of_locals();
+}
+
+int no_expr_class::get_number_of_locals() const {
+  return 0;
+}
+
+int object_class::get_number_of_locals() const {
+  return 0;
 }
 
 //******************************************************************

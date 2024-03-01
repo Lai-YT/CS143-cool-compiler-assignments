@@ -93,6 +93,8 @@ public:
    void enterscope();
    void exitscope();
    void addid(Symbol id);
+   // Especially for parameters, since they have positive offsets.
+   void addid(Symbol id, int offset);
 };
 
 class CgenNode : public class__class {
@@ -112,7 +114,7 @@ private:
    //
 
    // All methods of the class in the order of their offsets.
-   std::vector<std::pair<Symbol /* implementor*/, method_class *>>
+   std::vector<std::pair<Symbol /* implementor */, method_class *>>
        dispatch_layout;
    std::unordered_map<Symbol /* method name */, int /* offset */>
        dispatch_offsets;

@@ -82,7 +82,8 @@ void dump_with_types(ostream&,int);
 
 
 #define method_EXTRAS                                    \
-void code(ostream&, CgenClassTableP) const;
+void code(ostream&, CgenClassTableP) const; \
+int get_number_of_locals() const; \
 
 
 #define Formal_EXTRAS                              \
@@ -98,13 +99,15 @@ void dump_with_types(ostream&,int);
 #define Case_EXTRAS                             \
 virtual Symbol get_type_decl() const = 0; \
 virtual void code(int, ostream&, CgenClassTableP) const = 0; \
-virtual void dump_with_types(ostream& ,int) = 0;
+virtual void dump_with_types(ostream& ,int) = 0; \
+virtual int get_number_of_locals() const = 0;
 
 
 #define branch_EXTRAS                                   \
 Symbol get_type_decl() const { return type_decl; } \
 void code(int, ostream&, CgenClassTableP) const; \
-void dump_with_types(ostream& ,int);
+void dump_with_types(ostream& ,int); \
+int get_number_of_locals() const;
 
 
 #define Expression_EXTRAS                    \
@@ -115,11 +118,13 @@ virtual void code(ostream&, CgenClassTableP) = 0; \
 virtual void dump_with_types(ostream&,int) = 0;  \
 void dump_type(ostream&, int);               \
 Expression_class() { type = (Symbol) NULL; } \
-virtual bool is_no_expr() const { return false; }
+virtual bool is_no_expr() const { return false; } \
+virtual int get_number_of_locals() const = 0;
 
 #define Expression_SHARED_EXTRAS           \
 void code(ostream&, CgenClassTableP); 			   \
-void dump_with_types(ostream&,int);
+void dump_with_types(ostream&,int); \
+int get_number_of_locals() const override;
 
 #define no_expr_EXTRAS \
 bool is_no_expr() const override { return true; }
