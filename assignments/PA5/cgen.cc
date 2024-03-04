@@ -1579,6 +1579,24 @@ int object_class::get_number_of_locals() const {
 //
 //*****************************************************************
 
+namespace {
+
+void emit_abort_if_is_void(ostream &s, Expression expr_on_check,
+                           char *abort_label) {
+  // Abort the program if casing on void.
+  const int continue_label = get_next_label();
+  emit_bne(ACC, ZERO, continue_label, s);
+  emit_comment("Is void, abort", s);
+  // Take filename & line number as parameters.
+  emit_load_string(ACC, stringtable.lookup_string(curr_filename), s);
+  emit_load_imm(T1, expr_on_check->get_line_number(), s);
+  emit_jal(abort_label, s);
+  emit_label_def(continue_label, s);
+}
+
+} // namespace
+
+
 void assign_class::code(ostream &s, CgenClassTableP env) {
   emit_comment("Start assign", s);
 
@@ -1616,16 +1634,7 @@ void static_dispatch_class::code(ostream &s, CgenClassTableP env) {
 
   // Evaluate the object in dispatch.
   expr->code(s, env);
-
-  // Abort the program if dispatch on void.
-  const int continue_label = get_next_label();
-  emit_bne(ACC, ZERO, continue_label, s);
-  emit_comment("Is void, abort", s);
-  // Take filename & line number as parameters.
-  emit_load_string(ACC, stringtable.lookup_string(curr_filename), s);
-  emit_load_imm(T1, line_number, s);
-  emit_jal("_dispatch_abort", s);
-  emit_label_def(continue_label, s);
+  emit_abort_if_is_void(s, expr, "_dispatch_abort");
 
   // Pass SELF through ACC.
   Symbol dispatch_type = type_name;
@@ -1667,16 +1676,7 @@ void dispatch_class::code(ostream &s, CgenClassTableP env) {
 
   // Evaluate the object in dispatch.
   expr->code(s, env);
-
-  // Abort the program if dispatch on void.
-  const int continue_label = get_next_label();
-  emit_bne(ACC, ZERO, continue_label, s);
-  emit_comment("Is void, abort", s);
-  // Take filename & line number as parameters.
-  emit_load_string(ACC, stringtable.lookup_string(curr_filename), s);
-  emit_load_imm(T1, line_number, s);
-  emit_jal("_dispatch_abort", s);
-  emit_label_def(continue_label, s);
+  emit_abort_if_is_void(s, expr, "_dispatch_abort");
 
   // Now ACC points to the prototype object of the runtime type.
   // Next, get to the dispatch table.
@@ -1744,16 +1744,7 @@ void typcase_class::code(ostream &s, CgenClassTableP env) {
   // appears first.
   //
   expr->code(s, env);
-
-  // Abort the program if casing on void.
-  const int continue_label = get_next_label();
-  emit_bne(ACC, ZERO, continue_label, s);
-  emit_comment("Is void, abort", s);
-  // Take filename & line number as parameters.
-  emit_load_string(ACC, stringtable.lookup_string(curr_filename), s);
-  emit_load_imm(T1, expr->get_line_number(), s);
-  emit_jal("_case_abort2", s);
-  emit_label_def(continue_label, s);
+  emit_abort_if_is_void(s, expr, "_case_abort2");
 
   // The requirement of branch_class::code is the value to case has to be on the
   // top of the stack.
