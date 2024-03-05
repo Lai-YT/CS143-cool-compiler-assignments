@@ -1959,7 +1959,33 @@ void lt_class::code(ostream &s, CgenClassTableP env) {
 }
 
 void eq_class::code(ostream &s, CgenClassTableP env) {
-  code_comparison(e1, e2, emit_beq, s, env);
+  // The equality test is special. For non-primitive types, the test is whether
+  // the two objects have the same address with "beq". However, for primitive
+  // types, the built-in routine "equality_test" must be called.
+  // Here the description of the routine:
+  // Tests whether the objects passed in $t1 and $t2 have the same primitive
+  // type {Int, String, Bool} and the same value. If they do, the value in $a0
+  // is returned, otherwise $a1 is returned.
+  emit_comment("Evaluate left operand", s);
+  e1->code(s, env);
+  emit_push(ACC, s);
+  emit_comment("Evaluate right operand", s);
+  e2->code(s, env);
+  emit_push(ACC, s);
+  emit_comment("Restore right operand", s);
+  emit_pop(T2, s);
+  emit_comment("Restore left operand", s);
+  emit_pop(T1, s);
+  // Prepare the true value in $a0 and the false value in $a1.
+  emit_load_bool(ACC, truebool, s);
+  // We first compare the address. It fine for primitive types to be checked on
+  // their address, as we have the second check on the value for them.
+  // NOTE: non-primitive types always fail the "equality_test".
+  const int exit_label = get_next_label();
+  emit_beq(T1, T2, exit_label, s);
+  emit_load_bool(A1, falsebool, s);
+  emit_jal("equality_test", s);
+  emit_label_def(exit_label, s);
 }
 
 void leq_class::code(ostream &s, CgenClassTableP env) {
