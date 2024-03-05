@@ -1447,7 +1447,7 @@ void method_class::code(ostream &s, CgenClassTableP env) const {
 //
 
 int branch_class::get_number_of_locals() const {
-  return expr->get_number_of_locals();
+  return 1 + expr->get_number_of_locals();
 }
 
 int method_class::get_number_of_locals() const {
@@ -1806,9 +1806,10 @@ void typcase_class::code(ostream &s, CgenClassTableP env) {
 void branch_class::code(int exit_label, ostream &s, CgenClassTableP env) const {
   env->local_table->enterscope();
 
-  // Since the value to be type cased is on the top of the stack, it's
-  // automatically bounded to this name.
   env->local_table->addid(name);
+  // Load the value without popping it.
+  emit_load(ACC, 1, SP, s);
+  emit_store(ACC, *env->local_table->lookup(name), FP, s);
 
   // T1: class tag of the value
   emit_load(T1, *env->local_table->lookup(name), FP, s);
