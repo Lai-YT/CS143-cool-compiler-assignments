@@ -1797,8 +1797,10 @@ void typcase_class::code(ostream &s, CgenClassTableP env) {
   emit_jal("_case_abort", s);
 
   emit_label_def(exit_label, s);
+  // Remove the value to be type cased from the stack.
   emit_pop(ZERO, s);
-  emit_load_imm(ACC, 0 /* void */, s);
+  // The branch that is executed left the result in ACC, which is then the
+  // result of the type case.
 }
 
 // Each branch resides in a new scope. It assumes that the value to be type
