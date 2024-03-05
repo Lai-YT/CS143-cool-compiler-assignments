@@ -1920,6 +1920,8 @@ void divide_class::code(ostream &s, CgenClassTableP env) {
 
 void neg_class::code(ostream &s, CgenClassTableP env) {
   e1->code(s, env);
+  // Copy the result to the new object, so that we don't modify the original.
+  s << JAL;  emit_method_ref(Object, ::copy, s);  s << endl;
   emit_fetch_int(T1, ACC, s);
   emit_neg(T1, T1, s);
   emit_store_int(T1, ACC, s);
