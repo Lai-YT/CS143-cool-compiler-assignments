@@ -1362,8 +1362,8 @@ void CgenNode::code_class_init(ostream &s, CgenClassTableP env) const {
   // Emit code for our initialization:
   for (auto [implementor, attribute] : attribute_layout) {
     if (implementor != name) {
-      // Those not implemented by the current class are initialized by the
-      // parents,
+      // Those not implemented by the current class are already initialized by the
+      // parents.
       continue;
     }
     // We don't have to init attribute that doesn't have an init expression
@@ -1755,32 +1755,37 @@ void typcase_class::code(ostream &s, CgenClassTableP env) {
 
   //
   // Start sorting the branches.
-  std::vector<Case> cases_;
+  std::vector<Case> cases_(cases->len());
   for (int i = cases->first(); cases->more(i); i = cases->next(i)) {
-    cases_.push_back(cases->nth(i));
+    cases_.at(i) = cases->nth(i);
   }
 
   auto IsChildOf = [](CgenNode *a, CgenNode *b) {
-      if (cgen_debug) cout << "checking relation between " << a->name << " and " << b->name << endl;
+    if (cgen_debug) {
+      cout << "checking relation between " << a->name << " and " << b->name
+           << endl;
+    }
 
-      bool a_is_child_of_b = false;
-      List<CgenNode> *children_of_b = b->get_children();
-      for (auto *child = children_of_b; child; child = child->tl()) {
-          if (child->hd()->name == a->name) {
-              a_is_child_of_b = true;
+    bool a_is_child_of_b = false;
+    list_map<CgenNode>(
+        [&](const CgenNode *child) {
+          if (child->name == a->name) {
+            a_is_child_of_b = true;
           }
-      }
+        },
+        b->get_children());
 
-      if (cgen_debug) cout << b->name << " has " << list_length(b->get_children()) << " children" << endl;
-
-      return a_is_child_of_b;
+    if (cgen_debug) {
+      cout << b->name << " has " << list_length(b->get_children())
+           << " children" << endl;
+    }
+    return a_is_child_of_b;
   };
-  std::sort(cases_.begin(), cases_.end(),
-            [env, IsChildOf](const Case &a, const Case &b) {
-                // a is considered as "less than" b if a is not parent of b.
-                return !IsChildOf(env->lookup(b->get_type_decl()),
-                                  env->lookup(a->get_type_decl()));
-            });
+  std::sort(cases_.begin(), cases_.end(), [&](const Case &a, const Case &b) {
+    // a is considered as "less than" b if a is not parent of b.
+    return !IsChildOf(env->lookup(b->get_type_decl()),
+                      env->lookup(a->get_type_decl()));
+  });
   // End sorting the branches.
   //
 
