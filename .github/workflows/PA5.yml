@@ -1,0 +1,19 @@
+name: PA5
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: assignments/PA5
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+    - name: Install libfl-dev
+      run: sudo apt-get install libfl-dev
+    - name: Compile
+      run: make && make cgen
+    - name: Run tests
+      run: ./test.sh

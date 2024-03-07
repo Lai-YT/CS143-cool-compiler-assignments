@@ -1,0 +1,19 @@
+name: PA4
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: assignments/PA4
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+    - name: Install libfl-dev
+      run: sudo apt-get install libfl-dev
+    - name: Compile
+      run: make && make semant
+    - name: Run tests
+      run: ./test.sh
