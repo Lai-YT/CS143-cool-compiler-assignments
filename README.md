@@ -12,4 +12,4 @@ Each assignment will ultimately result in a working compiler phase which can int
 | [PA2](handouts/PA2.pdf) | lexical analyzer with *Flex* | [done](assignments/PA2/) |
 | [PA3](handouts/PA3.pdf) | parser with *Bison* | [done](assignments/PA3/) |
 | [PA4](handouts/PA4.pdf) | static semantics of *Cool* | [done](assignments/PA4/) |
-| [PA5](handouts/PA5.pdf) | code generation to *MIPS* | [in progress](assignments/PA5/) |
+| [PA5](handouts/PA5.pdf) | code generation to *MIPS* | [test passed](assignments/PA5/) |
