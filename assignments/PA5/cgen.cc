@@ -1636,24 +1636,27 @@ void static_dispatch_class::code(ostream &s, CgenClassTableP env) {
   expr->code(s, env);
   emit_abort_if_is_void(s, expr, "_dispatch_abort");
 
-  // Pass SELF through ACC.
+  // Now ACC points to the object of the runtime type.
+  // Although the static dispatch doesn't reply on the runtime type, we still have to
+  // pass its pointer to the method, so that the method can access the
+  // attributes of the object.
+
   Symbol dispatch_type = type_name;
   if (dispatch_type == SELF_TYPE) {
-    emit_move(ACC, SELF, s);
     dispatch_type = env->self_object;
     if (cgen_debug) {
       cout << "\tDispatching to SELF_TYPE, resolved as " << dispatch_type
            << endl;
     }
   } else {
-    emit_partial_load_address(ACC, s);  emit_protobj_ref(dispatch_type, s);  s << endl;
+    emit_partial_load_address(T1, s);  emit_protobj_ref(dispatch_type, s);  s << endl;
     if (cgen_debug) {
       cout << "\tDispatching to " << dispatch_type << endl;
     }
   }
 
   // Locate the method.
-  emit_load(T1, DISPTABLE_OFFSET, ACC /* self to dispatch_type */, s);
+  emit_load(T1, DISPTABLE_OFFSET, T1, s);
   const int offset = env->lookup(dispatch_type)->get_method_offset(name);
   emit_load(T1, offset, T1, s);
   if (cgen_debug) {
@@ -1678,7 +1681,7 @@ void dispatch_class::code(ostream &s, CgenClassTableP env) {
   expr->code(s, env);
   emit_abort_if_is_void(s, expr, "_dispatch_abort");
 
-  // Now ACC points to the prototype object of the runtime type.
+  // Now ACC points to the object of the runtime type.
   // Next, get to the dispatch table.
   emit_load(T1, DISPTABLE_OFFSET, ACC, s);
 
