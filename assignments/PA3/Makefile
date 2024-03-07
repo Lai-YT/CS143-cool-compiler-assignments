@@ -12,13 +12,13 @@ CSRC= parser-phase.cc utilities.cc stringtab.cc dumptype.cc \
       tree.cc cool-tree.cc tokens-lex.cc  handle_flags.cc 
 TSRC= myparser mycoolc cool-tree.aps
 CGEN= cool-parse.cc
-HGEN= cool-parse.h
+HGEN= cool-parse.h cool.tab.h
 LIBS= lexer semant cgen
 CFIL= ${CSRC} ${CGEN}
 HFIL= cool-tree.h cool-tree.handcode.h 
 LSRC= Makefile
 OBJS= ${CFIL:.cc=.o}
-OUTPUT= good.output bad.output
+OUTPUT= good.output bad.output cool.output
 
 
 CPPINCLUDE= -I. -I${CLASSDIR}/include/PA${ASSN} -I${CLASSDIR}/src/PA${ASSN}
